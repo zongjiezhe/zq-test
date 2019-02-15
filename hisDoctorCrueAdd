@@ -1,0 +1,2384 @@
+    <script>
+    	//修改患者名称，性别，年龄
+    	function modifyPatientInfo(_patientId){
+    		var patientNameTemp=$("#hzxm").val();
+    		var patientSexTemp=$("#hzxb").val();
+    		var patientAgeTemp=$("#hznl").val();
+    		
+    		if(patientNameTemp == '' || patientNameTemp == undefined) {
+    			alert("患者姓名不能为空");
+    			$("#hzxm").val('${mzYzMain.patientName}');
+    			return false;
+    		}
+    		if(patientAgeTemp == '' || patientAgeTemp == undefined) {
+    			alert("患者年龄不能为空");
+    			$("#hznl").val('${mzYzMain.page}');
+    			return false;
+    		}else{
+    			var reg = /^[0-9]*$/;
+    	    	if (!reg.test(patientAgeTemp)) {
+    	    		alert("请输入正确年龄")
+    	    		$("#hznl").val('${mzYzMain.page}');
+    	    		return false;
+    	    	}
+    		}
+    		$.ajax({
+        	 	type: 'POST',
+        	 	async: false,
+        	 	cache: false,
+        	     url:'/doctor/crue/modifyPatientName', 
+        	     data: {
+        	    	 patientId:_patientId,
+        	    	 patientName: patientNameTemp.trim(),
+        	    	 patientAge: patientAgeTemp.trim(),
+        	    	 patientSex: patientSexTemp.trim()
+        	     },
+        	     success: function(data) {
+
+        	     },
+        	     error: function(data){
+        	    	 alert("修改失败，请联系管理员");
+        	     }
+        	 });
+    	}
+    
+    	// 常用药方模糊查询
+        function searchChangYongYaofang(obj) {
+        	$.ajax({
+        	 	type: 'POST',
+        	 	async: false,
+        	 	cache: false,
+        	     url:'/doctor/crue/queryCommonAnagraph', 
+        	     data: {anagraphName:obj},
+        	     success: function(data) {
+        	    	 $("#commonAnagraphList").empty();
+         			 jQuery.each(data, function(i,item){
+         				$("#commonAnagraphList").append("<tr onclick='mainClick(" + data[i].id + ")'>"+
+         						"<td class='style1'>" + (i + 1) + "</td>"+
+         						"<td>" + data[i].anagraphCode + "</td>"+
+         						"<td>" + data[i].anagraphName + "</td>"+
+         						"<td>" + data[i].updateTime + " </td></tr>");
+                 	}); 
+        	     },
+        	     error: function(data){
+        	    	 alert("操作失败");
+        	     }
+        	 });
+        }
+    	// 增加药方初始化
+    	var chaflag = false;
+    	var yaofangCount = 1;
+        var yaofangId = 1;//药方ID
+        $(function() {
+        	$("#yf1").css("border","1px solid #f55821");
+            $("#add").click(function() {
+            	xuhao = 1;
+            	var yaofangIds=document.getElementsByName('yaofang');
+            	var yaofangIdsLength = yaofangIds.length+1;
+            	yaofangId++;
+            	var str="";
+            	str +="<table cellspacing='1' class='table_default yf' id='yf"+yaofangId+"' onclick=table_click('"+yaofangId+"') >"+
+            	 "<thead><tr><td colspan='10'>"+
+            	 "<div class='col-xs-3 text-left'><input id='yaofangradio"+yaofangId+"' type='radio' name='yaofangChangyong' checked value='"+yaofangId+"' style='margin-top:15px;' />"+
+            	 "<input type='hidden' name='yaofang' value='"+yaofangId+"' /></div>"+
+            	 "<div class='col-xs-1 text-right' style='font-weight:bold;'>药方<i id='yaofangshuzi"+yaofangId+"'>"+yaofangIdsLength+"</i></div>"+
+            	 "<div class='col-xs-2 text-center'>数量&nbsp;"+
+            	 "<input type='text'  class='input1' value='1' id='dose"+yaofangId+"' maxlength='2' onclick='doseClick(this)' onchange=sum2('"+yaofangId+"') onkeyup=sum2('"+yaofangId+"') style='width:50px;'/>"+
+            	 "&nbsp;剂</div> <div class='col-xs-5 text-left'>总计（元）：<front id='yaopinzongji"+yaofangId+"'>0</front></div>"+
+            	 "<div class='col-xs-1' style='padding:0;'><a href='javascript:void(0);' onclick=deleteYaofang(this,'"+yaofangId+"') class='glyphicon glyphicon-remove deleteYaofang_a' style='color:#fff;'></a></div>"+
+            	 "</td></tr>"+
+            	 "<tbody><tr><td colspan='10'>使用方法：&nbsp;&nbsp;<input type='text' class='input' id='usageMethod"+yaofangId+"'/>&nbsp;&nbsp;</td></tr>"+
+            	 "<tr><td class='td_in' style='width: 50%;'>"+
+            	 "<table class='fixed_table table_default sborder_none background_none padding_top5' style='background: rgb(204, 204, 204);' cellspacing='1'>"+
+            	 "<thead><tr><th class='style1'><input type='checkbox' onclick=quanxuan('"+yaofangId+"',this)  class='style_checkbox ver_align_none' /> </th>"+
+            	 "<th class='style1 yz_fx'>序号</th><th class='yz_name'>药品名称</th><th class='yz_num'>数量</th><th class='yz_bz'>备注</th></tr></thead>"+
+            	 "<tbody id='formulaList"+yaofangId+"a'></tbody></table></td>"+
+            	 "<td class='td_in'>"+
+            	 "<table class='fixed_table table_default sborder_none background_none padding_top5 box_id' style='background: rgb(204, 204, 204);' cellspacing='1'>"+
+            	 "<thead><tr><th class='style1'></th>"+
+            	 "<th class='style1 yz_fx'>序号</th><th class='yz_name'>药品名称</th><th class='yz_num'>数量</th><th class='yz_bz'>备注</th></tr></thead>"+
+            	 "<tbody id='formulaList"+yaofangId+"b'></tbody></table></td>"+
+            	 "</tr></tbody>"+
+            	 "<style>"+
+					".style5{z-index:2;position:relative;background-color:#03c;}"+
+					".style5 #appendMedicineAdd"+yaofangId+"{display:none;position:absolute;width:480px;text-align:left;background-color:#fff;border:1px solid #ccc;left:133px;top:50px;}"+
+					".style5 #appendMedicineAdd"+yaofangId+" div{display:block;height:35px;line-height:35px;padding:0 10px;width: 25%;font-size: 13px;float: left;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;display: block;}"+
+					".style5 #appendMedicineAdd"+yaofangId+" .addbgMedicineAdd{background-color:#F55821;color:#fff}"+
+					"#cureMedicineName"+yaofangId+"{    width: 358px;margin-left: 0px;}"+
+				"</style>"+
+            	 "<tfoot><tr><td class='style5' style='background: transparent;text-align: left;'><span class='bold500'>请输入药品名称：</span><input id='cureMedicineName"+yaofangId+"' placeholder='药品查询'  class='ypcx text_left ' value='' type='text' onkeyup='getMedicineNameContentAdd(this)'  maxlength='10' /><div id='appendMedicineAdd"+yaofangId+"' style= 'appendMedicine'></div></td>"+
+            	 "<td colspan='10' class='style0'>"+
+            	 "<input type='button' value='删除' onclick=deleleTd(this,'"+yaofangId+"') class='style_button1 remove_tr'/>"+
+            	 "</td>"+
+            	 "</tr>"+
+            	 "</tfoot>"+
+            	 "</table>";
+            	$("#yf_box").append(str);
+            	$(".table_default").css("border","1px solid #fff");
+            	yaofangCount = yaofangId;
+            	$("#yf"+yaofangId).css("border","1px solid #f55821");
+            	$(".table_default.yf").removeClass("in");
+            	$("#yf"+yaofangId).addClass("in");
+            	
+            	// 窗口滚动条拉倒最下边
+            	$(window).scrollTop($(document).height() - $(window).height());
+            })
+            // 获取常用药方的编码
+             $("#save").click(function() {
+            	 var yaofangId = $("input[name='yaofangChangyong']:checked").val();
+	           	  if(typeof(yaofangId)=="undefined") { 
+	           		  alert("请选中一个方案");
+	           		  return;
+	           	  }
+            	 $.ajax({
+             		type:'POST',
+             		url:'/doctor/medicine/getAnagraphCode',
+             		async: false,
+             		cache: false,
+             		data:{},
+             		success: function(data) {
+             			$("#anagraphCode").val(data);//方案编号
+             	     },
+             	     error: function(data){
+             	     }
+             	});
+            })
+        })
+        // 保存并打印医嘱、诊疗信息
+        function commitAndPrint() {
+        	var ids = [];
+			var json = JSON.parse("{\"title\":\"\",\"data\":[],\"dataList\":[],\"cureList\":[]}");
+			var diseaseName = $("#diseaseName").val();
+        	var data ={
+        		"id":$("#registerId").val(),
+        		"code" : $("#code").val(),
+        		"sysDepartmentId" : $("#sysDepartmentId").val(),
+        		"sysDepartmentName" : $("#sysDepartmentName").val(),
+        		"sysUserId" : $("#sysUserId").val(),
+        		"sysUserName" : $("#sysUserName").val(),
+        		"patientId" : $("#patientId").val(),
+        		"registerId" : $("#registerId").val(),
+        		"diseaseName" : $("#diseaseName").val(),
+        		"patientName" : $("#hzxm").val().trim(),
+        		"usageMethodZhenliao" : $("#usageMethodZhenliao").val()
+        	};
+        	//放入data中
+        	json.data = data;
+        	//格式化数据
+        	var yaofangIds=document.getElementsByName('yaofang');
+        	for(var i=0; i<yaofangIds.length; i++) {
+  				var yaofangId = yaofangIds[i].value;
+  				var dose = $("#dose"+yaofangId).val();
+  				if(dose == '') {
+   					alert("剂的数量请输入数字！")
+   					return;
+   				}
+   				if(parseFloat(dose) <= 0) {
+   					alert("剂的数量必须大于0")
+   					return;
+   				}
+   				if(!checkNumber(dose)) {
+   					alert("剂的数量请输入数字！");
+   					return;
+   				}
+  				var data = {
+  	            		"usageMethod":$("#usageMethod"+yaofangId).val(),
+  	            		"dose":dose,
+  	            		"medicineList":[]
+  	            };
+  				var peifangId=document.getElementsByName('Check[]'+yaofangId); 
+  	      		for(var j=0; j<peifangId.length; j++) {
+      				var id = peifangId[j].value;
+      				var numV = $("#"+yaofangId+"num_P_"+id).val();
+      				if(numV == '') {
+      					alert("药品的数量请输入数字！")
+      					return;
+      				}
+      				if(parseFloat(numV) <= 0) {
+      					alert("药品的数量必须大于0")
+      					return;
+      				}
+      				if(!checkNumber(numV)) {
+      					alert("药品的数量请输入数字！");
+      					return;
+      				}
+					if($.inArray(id, ids) >= 0) {   
+       					alert("不能重复选药品");   
+       					return;
+       				} 
+					var medicineName= $("#"+yaofangId+"medicineName_P_"+id).val();
+					if(medicineName == ''){
+						alert("药品名称不能为空");   
+    				    return;
+					}
+      				var dataList = {
+      					"tempId" : id,
+      					"medicineSerialNo" : $("#"+yaofangId+"medicineSerialNo_P_"+id).val(), //药品编号
+      					"medicineName" : medicineName, //药品名称
+      					"unit" : $("#"+yaofangId+"unit_P_"+id).val(), //单位
+      					"num" : $("#"+yaofangId+"num_P_"+id).val(), //数量
+      					"salePrice" : $("#"+yaofangId+"salePrice_P_"+id).val(), //单价
+      					"salePriceTotal" : $("#"+yaofangId+"salePriceTotal_P_"+id).val(), //总价
+      					"remark" : $("#"+yaofangId+"remark_P_"+id).find("option:selected").text() //备注
+      				};
+      				//放入json dataList中 向JSON数组添加JSON对象
+      				data.medicineList.push(dataList);
+  	      		} 
+  	      		json.dataList.push(data);
+  	      		ids=[];
+        	}
+        	//获取诊疗列表
+        	var peifangIdcure=document.getElementsByName('Check[]cure'); 
+        	var coun1 = 0;
+        	for(var i=0; i<peifangIdcure.length; i++) {
+        			var id = peifangIdcure[i].value;
+        			var numV = $("#curenum_P_"+id).val();
+        			if(numV == '') {
+        				alert("治疗和其它的数量请输入数字！")
+        				return;
+        			}
+        			if(parseFloat(numV) <= 0) {
+        				alert("治疗和其它的数量必须大于0")
+        				return;
+        			}
+        			if(!checkNumber(numV)) {
+        				alert("治疗和其它的数量请输入数字！");
+        				return;
+        			}
+        			if(ids.indexOf(id) >= 0 ) {   
+        			    alert("不能重复选诊疗项目");   
+        			    return;
+        			} 
+        			if(ids != "") {
+        				ids += "," + id;
+        			} else {
+        				ids += id;
+        			}
+        			var cureList = {
+        					"tempId" : id,
+            				"cureSerialNo" : $("#cureSerialNo_P_"+id).text(), //药品编号
+            				"cureName" : $("#cureName_P_"+id).val(), //药品名称
+            				"unit" : $("#cureunit_P_"+id).text(), //单位
+            				"num" : $("#curenum_P_"+id).val(), //数量
+            				"salePrice" : $("#curetotalPricce_P_"+id).text(), //单价
+    	      				"salePriceTotal" : $("#curetotalPricceT_P_"+id).text(), //总价
+    	      				"remark" : $("#crueremark_P_"+id).val() //备注
+        			};
+        			//放入json dataList中 向JSON数组添加JSON对象
+        			json.cureList.push(cureList);
+        			++coun1;
+        		//}
+        	} 
+        	
+        	var jsonStr = JSON.stringify(json);
+        	$.ajax({
+        	 	type: 'POST',
+        	 	async: false,
+        	 	cache: false,
+        	     url:"/doctor/crue/add", 
+        	     data: {'param':jsonStr},//参数
+        	     success: function(data) {
+        	    	 if(data.message == 'SUCCESS'){
+        	    		 alert("提交成功");
+        	    		 window.location.href="/doctor/crue/openRemark?id="+$("#registerId").val();
+        	    	 } else if(data.message == 'HAVING'){
+        	    		 alert("该医嘱正在被其他用户编辑，不可同时操作！");
+        	    		 window.location.href="/doctor/crue/list?onlyMe=1";
+        	    	 } else {
+        	    		 alert(data.message);
+        	    	 }
+        	     },
+        	     error: function(data){
+        	    	 alert("保存失败");
+        	     }
+        	 }); 
+        	
+        }
+        
+        //提交主表
+        function commit(flag) {
+        	// 自动保存常用药方
+//         	commitFirstChangyong();
+        	var _peiFangCountFlag = true;
+        	var _yaofangIdsTemp = document.getElementsByName('yaofang');
+        	for(var i=0; i<_yaofangIdsTemp.length; i++) {
+        		var _yaofangIdTemp = _yaofangIdsTemp[i].value;
+  				var _peifangIdTemp=document.getElementsByName('Check[]'+_yaofangIdTemp);
+  				if(_peifangIdTemp.length > 0) {
+  					_peiFangCountFlag = false;
+  					break;
+  				}
+  			}
+  			var _peifangIdcureTemp=document.getElementsByName('Check[]cure');
+        	// 药方和诊疗同时不存在则为暂存
+        	if(_peiFangCountFlag === true && _peifangIdcureTemp.length == 0 && flag == 1) {
+        		flag = 0;
+        	}
+        	var ids = [];
+			var json = JSON.parse("{\"title\":\"\",\"data\":[],\"dataList\":[],\"cureList\":[]}");
+			var diseaseName = $("#diseaseName").val();
+        	var data = {
+        		"id":$("#registerId").val(),
+        		"code" : $("#code").val(),
+        		"flag" : flag,
+        		"sysDepartmentId" : $("#sysDepartmentId").val(),
+        		"sysDepartmentName" : $("#sysDepartmentName").val(),
+        		"sysUserId" : $("#sysUserId").val(),
+        		"sysUserName" : $("#sysUserName").val(),
+        		"patientId" : $("#patientId").val(),
+        		"registerId" : $("#registerId").val(),
+        		"diseaseName" : $("#diseaseName").val(),
+        		"patientName" : $("#hzxm").val().trim(),
+        		"usageMethodZhenliao" : $("#usageMethodZhenliao").val()
+        	};
+        	//放入data中
+        	json.data = data;
+        	//格式化数据
+        	var yaofangIds=document.getElementsByName('yaofang');
+        	for(var i=0; i<yaofangIds.length; i++) {
+  				var yaofangId = yaofangIds[i].value;
+  				var dose = $("#dose"+yaofangId).val();
+  				if(dose == '') {
+   					alert("剂的数量请输入数字！")
+   					return;
+   				}
+   				if(parseFloat(dose) <= 0) {
+   					alert("剂的数量必须大于0")
+   					return;
+   				}
+   				if(!checkNumber(dose)) {
+   					alert("剂的数量请输入数字！");
+   					return;
+   				}
+  				var data = {
+  	            		"usageMethod":$("#usageMethod"+yaofangId).val(),
+  	            		"dose":dose,
+  	            		"medicineList":[]
+  	            };
+  				var peifangId=document.getElementsByName('Check[]'+yaofangId); 
+  	      		for(var j=0; j<peifangId.length; j++) {
+  	      				var id = peifangId[j].value;
+  	      				var numV = $("#"+yaofangId+"num_P_"+id).val();
+  	      				if(numV == '') {
+  	      					alert("药品的数量请输入数字！")
+  	      					return;
+  	      				}
+  	      				if(parseFloat(numV) <= 0) {
+  	      					alert("药品的数量必须大于0")
+  	      					return;
+  	      				}
+  	      				if(!checkNumber(numV)) {
+  	      					alert("药品的数量请输入数字！");
+  	      					return;
+  	      				}
+						if($.inArray(id, ids) >= 0) {   
+	    				    alert("不能重复选药品");   
+	    				    return;
+	    				}
+						var medicineName= $("#"+yaofangId+"medicineName_P_"+id).val();
+						if(medicineName == ''){
+							alert("药品名称不能为空");
+	    				    return;
+						}
+  	      				var dataList = {
+  	      					"tempId" : id,
+  	      					"sort" : $("#"+yaofangId+"sort_P_"+id).text(), //药品排序编号
+  	      					"medicineSerialNo" : $("#"+yaofangId+"medicineSerialNo_P_"+id).val(), //药品编号
+  	      					"medicineName" : medicineName, //药品名称
+  	      					"unit" : $("#"+yaofangId+"unit_P_"+id).val(), //单位
+  	      					"num" : $("#"+yaofangId+"num_P_"+id).val(), //数量
+  	      					"salePrice" : $("#"+yaofangId+"salePrice_P_"+id).val(), //单价
+  	      					"salePriceTotal" : $("#"+yaofangId+"salePriceTotal_P_"+id).val(), //总价
+  	      					"remark" : $("#"+yaofangId+"remark_P_"+id).find("option:selected").text() //备注
+  	      				};
+  	      				yaoFangIsHaveFlag = false;
+  	      				//放入json dataList中 向JSON数组添加JSON对象
+  	      				data.medicineList.push(dataList);
+  	      		} 
+  	      		json.dataList.push(data);
+  	      		ids=[];
+        	}
+        	//获取诊疗列表
+        	var peifangIdcure=document.getElementsByName('Check[]cure'); 
+        	var coun1 = 0;
+        	for(var i=0; i<peifangIdcure.length; i++) {
+        			var id = peifangIdcure[i].value;
+        			var numV = $("#curenum_P_"+id).val();
+        			if(numV == '') {
+        				alert("治疗和其它的数量请输入数字！")
+        				return;
+        			}
+        			if(parseFloat(numV) <= 0) {
+        				alert("治疗和其它的数量必须大于0")
+        				return;
+        			}
+        			if(!checkNumber(numV)) {
+        				alert("治疗和其它的数量请输入数字！");
+        				return;
+        			}
+        			if(ids.indexOf(id) >= 0 ) {   
+        			    alert("不能重复选诊疗项目");   
+        			    return;
+        			} 
+        			if(ids != "") {
+        				ids += "," + id;
+        			} else {
+        				ids += id;
+        			}
+        			var cureList = {
+        					"tempId" : id,
+            				"cureSerialNo" : $("#cureSerialNo_P_"+id).text(), //药品编号
+            				"cureName" : $("#cureName_P_"+id).val(), //药品名称
+            				"unit" : $("#cureunit_P_"+id).text(), //单位
+            				"num" : $("#curenum_P_"+id).val(), //数量
+            				"salePrice" : $("#curetotalPricce_P_"+id).text(), //单价
+    	      				"salePriceTotal" : $("#curetotalPricceT_P_"+id).text(), //总价
+    	      				"remark" : $("#crueremark_P_"+id).val() //备注
+        			};
+        			//放入json dataList中 向JSON数组添加JSON对象
+        			json.cureList.push(cureList);
+        			++coun1;
+        		//}
+        	} 
+        	var jsonStr = JSON.stringify(json);
+        	$.ajax({
+        	 	type: 'POST',
+        	 	async: false,
+        	 	cache: false,
+        	     url:"/doctor/crue/add", 
+        	     data: {'param':jsonStr},//参数
+        	     success: function(data) {
+        	    	 if(data.message == 'SUCCESS') {
+        	    		 $("#tips_modal").modal("show");
+    		    		 setTimeout(tiaozhuan, 800);
+        	    	 } else if(data.message == 'HAVING') {
+        	    		 alert("该医嘱正在被其他用户编辑，不可同时操作！");
+        	    		 window.location.href="/doctor/crue/list?onlyMe=1";
+        	    	 } else if(data != "") {
+        	    		 alert(data.message);
+        	    	 }
+        	     },
+        	     error: function(data) {
+        	    	 alert("保存失败");
+        	     }
+        	 }); 
+        }
+        function tiaozhuan() {
+    		$("#tips_modal").modal("hide");
+    		window.location.href="/doctor/crue/list?onlyMe=1";
+		}
+      	//加载药品弹出框
+        function add_drug_modal(modaltitle,modalbody,id) {
+        	$(".modal-title").html(modaltitle);
+        	$("#add_drug_modal").modal("show");
+        	$.ajax({
+        		type:'POST',
+        		async: false,
+        		cache: false,
+        		url:'/base/medicine/getAllListNoPage',
+        		data:{isProhibit:0},
+        		success: function(data) {
+        			$("#yaofangId").val(id);
+        			$("#caigouList").empty();
+        			jQuery.each(data, function(i,item) {
+        				$("#caigouList").append("<tr><td class='style5'><input class='style_checkbox' name='medicine_radio' type='checkbox' value='"+item.id+"' /></td>"+
+        						"<td class='style5' id='medicineSerialNo_"+item.id+"'>"+item.medicineSerialNo+"</td>"+
+        						"<td class='style5' id='medicineName_"+item.id+"'>"+item.medicineName+"</td>"+
+        						"<input type='hidden' id='remark_"+item.id+"'value='"+item.remark+"' />"+
+        						"<input type='hidden' id='salePrice_"+item.id+"'value='"+item.salePrice+"' />"+
+        						"<td class='style5' id='unit_"+item.id+"'>"+item.unit+"</td></tr>");
+                	}); 
+        	     },
+        	     error: function(data) {
+        	     }
+        	});
+        	
+        };
+      	//获取药品信息赋值列表显示
+        function close_modal() {
+        	var yaofangId = $("#yaofangId").val();
+        	//所有选中的药品id
+        	var ids = [];
+        	//获取已选择的药品类别信息
+        	var peifangId=document.getElementsByName('Check[]'+yaofangId);
+        	for(var i=0; i<peifangId.length; i++) {    
+        		var tempId = peifangId[i].value;
+				ids.push(tempId);
+        	}    
+        	var chk_value =[]; 
+        	$('input[name="medicine_radio"]:checked').each(function() { 
+        		chk_value.push($(this).val()); 
+        	}); 
+        	var str = "";
+        	var idsMeddicine = "";
+        	if(chk_value.length > 0) {
+        		for(var i=0; i < chk_value.length; i++) {
+        			var id = chk_value[i];
+        			if(idsMeddicine != "") {
+        				idsMeddicine += "," + id;
+        			} else {
+        				idsMeddicine += id;
+        			}
+        		}
+        		for(var i=0; i < chk_value.length; i++) {
+        			var id = chk_value[i];
+        			var bl = false;
+                	bl = shibafan(yaofangCount,id);
+                	if(!bl) {
+                		return;
+                	}
+                	bl = shibafanMedicine(id,idsMeddicine);
+                	if(!bl) {
+                		return;
+                	}
+        		}
+        		for(var i=0; i < chk_value.length; i++) {
+        			var id = chk_value[i];
+        			var bl = false;
+                	bl = shibafan(yaofangCount,id);
+                	if(!bl) {
+                		return;
+                	}
+                	bl = shibafanMedicine(id,idsMeddicine);
+                	if(!bl) {
+                		return;
+                	}
+					if($.inArray(id,ids) >= 0 ) {   
+       					alert("不能重复选药品");   
+       					return;
+       				}
+        			var medicineSerialNo =  $("#medicineSerialNo_"+chk_value[i]).text();//药品编号
+        			var medicineName =  $("#medicineName_"+chk_value[i]).text();//药品名称
+        			var unit =  $("#unit_"+chk_value[i]).text();//单位
+        			var remark =  $("#remark_"+chk_value[i]).val();
+        			var salePrice =  $("#salePrice_"+chk_value[i]).val();//销售单价
+        			str += "<tr><td class='style1'><input class='style_checkbox margin_auto' type='checkbox' name='Check[]"+yaofangId+"' value='"+id+"' /></td>"+ 
+        				   "<td class='font_size16' id='"+yaofangId+"medicineName_P_"+id+"'>"+medicineName+"</td>"+
+        				   "<td class='font_size16'><input class='input_kz' id='"+yaofangId+"num_P_"+id+"' value='1' type='text' onkeyup='sum2("+yaofangId+")' onchange='sum2("+yaofangId+")' maxlength='10' /></td>"+
+        				   "<td class='font_size16'> <input class='input_bz' maxlength='4' id='"+yaofangId+"remark_P_"+id+"' /></td>"+
+        				   "<input type='hidden' id='"+yaofangId+"medicineSerialNo_P_"+id+"' value='"+medicineSerialNo+"' />"+
+        				   "<input type='hidden' id='"+yaofangId+"unit_P_"+id+"'  value= '"+unit+"' />"+
+        				   "<input type='hidden' id='"+yaofangId+"salePrice_P_"+id+"' value= '"+salePrice+"' />"+
+        				   "<input type='hidden' id='"+yaofangId+"salePriceTotal_P_"+id+"' value= '"+salePrice+"' />"+
+        				   "</tr>";
+        			var tablea= $("#formulaList"+yaofangId+"a tr").length;
+        			var tableb= $("#formulaList"+yaofangId+"b tr").length;
+        			tablea=parseInt(tablea);
+        			tableb=parseInt(tableb);
+        			var tempTableAB = tablea+tableb;
+        			if(tablea<=tableb) {
+        				$("#formulaList"+yaofangId+"a").append(str);
+        			} else {
+        				$("#formulaList"+yaofangId+"b").append(str);
+        			}
+        			str = "";
+        		}
+        	}
+        	$("#add_drug_modal").modal("hide");
+        	sum2(yaofangId);
+        	$("#q_medicine_serial_no").val("");
+        	$("#q_medicine_name").val("");
+        }
+     	//验证字符串是否是数字 
+        function checkNumber(theObj) {   
+        	var reg = /^\d*$/;
+        	if (reg.test(theObj)) {     
+        		return true;   
+        	}   
+        	return false; 
+        } 
+     	
+      //模糊查询药品
+        function search_modal() {
+        	$.ajax({
+        		type:'POST',
+        		url:'/base/medicine/getAllListNoPage',
+        		data:{
+        			medicineSerialNo:$("#q_medicine_serial_no").val(),
+        			medicineName:$("#q_medicine_name").val(),
+        			isProhibit:0
+        		},
+        		success: function(data) {                                       
+        			$("#caigouList").empty();
+        			jQuery.each(data, function(i,item) {
+        				$("#caigouList").append("<tr><td class='style5'><input class='style_checkbox' name='medicine_radio' type='checkbox' value='"+item.id+"' /></td>"+
+        						"<td class='style5' id='medicineSerialNo_"+item.id+"'>"+item.medicineSerialNo+"</td>"+
+        						"<td class='style5' id='medicineName_"+item.id+"'>"+item.medicineName+"</td>"+
+        						"<input type='hidden' id='remark_"+item.id+"'value='"+item.remark+"' />"+
+        						"<input type='hidden' id='salePrice_"+item.id+"'value='"+item.salePrice+"' />"+
+        						"<td class='style5' id='unit_"+item.id+"'>"+item.unit+"</td></tr>");
+                	}); 
+        	     },
+        	     error: function(data) {
+        	     }
+        	});
+        };
+      //加载诊疗弹出框
+        function add_cure_modal(modaltitle,modalbody) {
+        	$(".modal-title").html(modaltitle);
+        	$("#add_cure_modal").modal("show");
+        	$.ajax({
+        		type:'POST',
+        		url:'/base/cure/getCureList',
+        		data:{},
+        		success: function(data) {
+        			$("#cureList").empty();
+        			jQuery.each(data, function(i,item) {
+        				$("#cureList").append("<tr><td class='style5'><input class='style_checkbox' name='cure_radio' type='checkbox' value='"+item.id+"' /></td>"+
+        						"<td class='style5' id='cureSerialNo_"+item.id+"'>"+item.cureSerialNo+"</td>"+
+        						"<td class='style5' id='cureName_"+item.id+"'>"+item.cureName+"</td>"+
+        						"<td class='style5' id='totalPricce_"+item.id+"'>"+item.totalPricce+"</td>");
+                	}); 
+        	     },
+        	     error: function(data) {
+        	     }
+        	});
+        	
+        };
+        
+      //模糊查询诊疗
+        function search_modal_cure() {
+        	$.ajax({
+        		type:'POST',
+        		url:'/base/cure/getCureList',
+        		data:{
+        			cureSerialNo:$("#q_cure_serial_no").val(),
+        			cureName:$("#q_cure_name").val()
+        		},
+        		success: function(data) {
+        			$("#cureList").empty();
+        			jQuery.each(data, function(i,item) {
+        				$("#cureList").append("<tr><td class='style5'><input class='style_checkbox' name='cure_radio' type='checkbox' value='"+item.id+"' /></td>"+
+        						"<td class='style5' id='cureSerialNo_"+item.id+"'>"+item.cureSerialNo+"</td>"+
+        						"<td class='style5' id='cureName_"+item.id+"'>"+item.cureName+"</td>"+
+        						"<td class='style5' id='totalPricce_"+item.id+"'>"+item.totalPricce+"</td>");
+                	}); 
+        	     },
+        	     error: function(data) {
+        	     }
+        	});
+        };
+        
+      //获取诊疗信息赋值列表显示
+        function close_modal_cure() {
+        	//所有选中的诊疗id
+        	var ids = [];
+        	//获取已选择的药品类别信息
+        	var peifangId=document.getElementsByName('Check[]cure'); 
+        	for(var i=0; i<peifangId.length; i++) {    
+        		var tempId = peifangId[i].value;
+				ids.push(tempId);
+        	}    
+        	var chk_value =[]; 
+        	$('input[name="cure_radio"]:checked').each(function() { 
+        		chk_value.push($(this).val()); 
+        	}); 
+        	var str = "";
+        	if(chk_value.length > 0) {
+        		for(var i=0; i < chk_value.length; i++) {
+        			var id = chk_value[i];
+					if($.inArray(id,ids) >= 0) {   
+        			    alert("不能重复选诊疗项目");   
+        			    return;
+        			}
+        			var cureSerialNo =  $("#cureSerialNo_"+chk_value[i]).text();//编号
+        			var cureName =  $("#cureName_"+chk_value[i]).text();//名称
+        			var totalPricce =  $("#totalPricce_"+chk_value[i]).text();//价格
+        			var salePrice =  $("#salePrice_"+chk_value[i]).text();
+        			str += "<tr><td class='style5'><input class='style_checkbox' type='checkbox' name='Check[]cure' value='"+id+"' /></td>"+ 
+        				   "<td class='style5' id='cureSerialNo_P_"+id+"'>"+cureSerialNo+"</td>"+
+        				   "<td class='style5' id='cureName_P_"+id+"'>"+cureName+"</td>"+
+        				   "<td class='style5'><input id='curenum_P_"+id+"' value='1' type='text' onkeyup='checkNumZhenliao("+id+")' onchange='checkNumZhenliao("+id+")' maxlength='10' /></td>"+
+        				   "<td class='style5' > <span id='cureunit_P_"+id+"'>次</span></td>"+
+        				   "<td class='style5' > <span id='curetotalPricce_P_"+id+"'>"+totalPricce+"</span></td>"+
+        				   "<td class='style5' > <span id='curetotalPricceT_P_"+id+"'>"+totalPricce+"</span></td>"+
+        				   "<td class='style5'> <input maxlength='40' id='crueremark_P_"+id+"' /></td></tr>";
+        		}
+        	}
+        	$("#add_cure_modal").modal("hide");
+        	$("#formulaListCure").append(str);
+        	sum1();
+        	$("#q_cure_serial_no").val("");
+			$("#q_cure_name").val("");
+        }
+      // 删除药方
+        function deleteYaofang(dele1,yaofangId) {
+        	var r=confirm("您确认要删除吗");
+        	if (r==true) {
+        		$(dele1).parents(".table_default").remove();  
+                sum3();
+                var yaofangIds=document.getElementsByName('yaofang');
+            	for(var i=0; i<yaofangIds.length; i++) {
+      				var yaofangIdTemp = yaofangIds[i].value;
+      				$("#yaofangshuzi"+yaofangIdTemp).text(i+1);
+      				if(i==yaofangIds.length-1) {
+      					$(".table_default").css("border","1px solid #fff");
+      	            	yaofangCount = yaofangIdTemp;
+      	            	$("#yf"+yaofangIdTemp).css("border","1px solid #f55821");
+      	            	$(".table_default.yf").removeClass("in");
+      	            	$("#yf"+yaofangIdTemp).addClass("in");
+      	            	chaflag = true;
+      	            	$("#yaofangradio" + yaofangIdTemp)[0].checked = true; 
+      				}
+            	}
+        	  }
+        }
+        //删除药品明细的td
+        function deleleTd(dele,id) {
+        	$("input[name='Check[]"+id+"']:checked").parent().parent().remove();
+        	sum2(id);
+        	var tablea= $("#formulaList"+yaofangCount+"a tr").length;
+			var tableb= $("#formulaList"+yaofangCount+"b tr").length;
+			tablea=parseInt(tablea);
+			tableb=parseInt(tableb);
+			if(tablea > tableb) {
+				var _temp = Math.floor((tablea - tableb)/2);
+				if(_temp >= 1) {
+					for(var i = _temp; i > 0; i--) {
+						var _tablea = $("#formulaList"+yaofangCount+"a tr").length;
+						var _str = "<tr>";
+						_str += $("#formulaList"+yaofangCount+"a tr")[_tablea - i].innerHTML;
+						_str += "</tr>";
+						$("#formulaList"+yaofangCount+"b").append(_str);
+						var _id = $("#formulaList"+yaofangCount+"a tr")[_tablea - i].children[0].firstChild.value;
+						var _numTemp = $("#formulaList"+yaofangCount+"a tr")[_tablea - i].children[3].lastChild.value;
+						var _ramarkTemp = $("#formulaList"+yaofangCount+"a tr")[_tablea - i].children[4].lastChild.value;
+						$("#formulaList"+yaofangCount+"a tr")[_tablea - i].remove();
+						$("#"+yaofangCount+"num_P_" + _id).val(_numTemp);
+						$("#"+yaofangCount+"remark_P_" + _id).val(_ramarkTemp);
+					}
+				}
+			} 
+			if(tableb > tablea) {
+				var _temp = Math.ceil((tableb - tablea)/2);
+				if(_temp > 0) {
+					for(var i = _temp; i > 0; i--) {
+						var _tableb = $("#formulaList"+yaofangCount+"b tr").length;
+						var _str = "<tr>";
+						_str += $("#formulaList"+yaofangCount+"b tr")[_tableb - i].innerHTML;
+						_str += "</tr>";
+						$("#formulaList"+yaofangCount+"a").append(_str);
+						var _id = $("#formulaList"+yaofangCount+"b tr")[_tableb - i].children[0].firstChild.value;
+						var _numTemp = $("#formulaList"+yaofangCount+"b tr")[_tableb - i].children[3].lastChild.value;
+						var _ramarkTemp = $("#formulaList"+yaofangCount+"b tr")[_tableb - i].children[4].lastChild.value;
+						$("#formulaList"+yaofangCount+"b tr")[_tableb - i].remove();
+						$("#"+yaofangCount+"num_P_" + _id).val(_numTemp);
+						$("#"+yaofangCount+"remark_P_" + _id).val(_ramarkTemp);
+					}
+				}
+			} 
+			// 重新计算序号
+			var _aTableLength = $("#formulaList"+yaofangCount+"a tr").length;
+			var _xuhaoATemp = 1;
+			for(var i = 0; i < _aTableLength; i++) {
+				$("#formulaList"+yaofangCount+"a tr")[i].children[1].innerHTML=_xuhaoATemp;
+				_xuhaoATemp += 2;
+			}
+			var _bTableLength = $("#formulaList"+yaofangCount+"b tr").length;
+			var _xuhaoBTemp = 2;
+			for(var i = 0; i < _bTableLength; i++) {
+				$("#formulaList"+yaofangCount+"b tr")[i].children[1].innerHTML=_xuhaoBTemp;
+				_xuhaoBTemp += 2;
+			}
+        }
+      //删除诊疗的td
+        function deleleTdZhenliao(dele) {
+    	  	if($("input[name='Check[]cure']:checked").length == 0) {
+    	  		alert("请选择需要删除的项目");
+    	  		return;
+    	  	}
+        	$("input[name='Check[]cure']:checked").parents("tr").remove();
+        	sum1();
+        }
+      var yaoFangTemp = 0;
+      // 药方点击事件
+        function table_click(id) {
+        	if(chaflag) {
+        		chaflag = false;
+        		return;
+        	}
+        	if($("#yaofangradio" + id)[0] == undefined) {
+        		return false;
+        	} else {
+	        	$("#yaofangradio" + id)[0].checked = true; 
+        	} 
+        	yaoFangTemp = id;
+        	$(".table_default").css("border","1px solid #fff");
+        	yaofangCount = id;
+        	$("#yf"+id).css("border","1px solid #f55821");
+        	$(".table_default.yf").removeClass("in");
+        	$("#yf"+id).addClass("in");
+        	xuhao = $("input[name='Check[]"+id+"']").length + 1;
+        }
+        // 常用药品点击添加修改
+        function frequentClickEdit(id){
+        	$("#yf"+yaofangCount)
+        	if ($("#yf"+yaofangCount).length>0){
+        		
+        	}else{
+        		alert("请选择药方");
+        		return;
+        	}
+        	var bl = false;
+        	bl = shibafan(yaofangCount, id);
+        	if(!bl) {
+        		return;
+        	}
+        	//获取已选择的药品类别信息
+        	var ids = [];
+        	var peifangId=document.getElementsByName('Check[]'+yaofangCount); 
+        	for(var i=0; i<peifangId.length; i++) {    
+        		var tempId = peifangId[i].value;
+				ids.push(tempId);
+        	} 
+        	if($.inArray(id,ids) >= 0 ) {   
+        	    alert("不能重复选药品");
+        	    $("#" + _editMedicineId).val(_medicineTemp);
+        	    return false;
+        	} 
+        	var medicineSerialNo = $("#frequentList_medicineSerialNo_"+id).text();
+        	var medicineName = $("#frequentList_medicineName_"+id).text();
+        	var unit = $("#frequentList_unit_"+id).text();
+        	var remark = $("#frequentList_remark_"+id).val();
+        	var salePrice = $("#frequentList_salePrice_"+id).text();
+        	if(medicineSerialNo == "" || medicineSerialNo == undefined) {
+        		$.ajax({
+            		type:'POST',
+            		url:'/doctor/crue/queryMedicineDetail',
+            		async:false, 
+            		cache: false,
+            		data:{'id':id},
+            		success: function(data) {
+            			medicineSerialNo = data.medicineSerialNo;
+                    	medicineName = data.medicineName;
+                    	unit = data.unit;
+                    	remark = data.remark;
+                    	salePrice = data.salePrice;
+            	     },
+            	     error: function(data) {
+            	     }
+            	});
+        	}
+			var _temp = _editMedicineId.split("_P_")[1];
+			$("#" + yaofangCount + "checkFlag_P_" + _temp).val(id);
+			$("#" + yaofangCount + "checkFlag_P_" + _temp).attr("id", yaofangCount + "checkFlag_P_" + id);
+			
+			$("#" + yaofangCount + "sort_P_" + _temp).attr("id", yaofangCount + "sort_P_" + id);
+			
+			$("#" + yaofangCount + "remark_P_" + _temp).val(remark);
+			$("#" + yaofangCount + "remark_P_" + _temp).attr("id", yaofangCount + "remark_P_" + id);
+			
+			$("#" + yaofangCount + "num_P_" + _temp).attr("id", yaofangCount + "num_P_" + id);
+			
+			$("#" + _editMedicineId).val(medicineName);
+			$("#"  + yaofangCount + "medicineName_P_" + _temp).attr("id", yaofangCount + "medicineName_P_" + id);
+			
+			$("#" + yaofangCount + "medicineSerialNo_P_" + _temp).val(medicineSerialNo);
+			$("#" + yaofangCount + "medicineSerialNo_P_" + _temp).attr("id", yaofangCount + "medicineSerialNo_P_" + id);
+			
+			$("#" + yaofangCount + "unit_P_" + _temp).val(unit);
+			$("#" + yaofangCount + "unit_P_" + _temp).attr("id", yaofangCount + "unit_P_" + id);
+			
+			$("#" + yaofangCount + "salePrice_P_" + _temp).val(salePrice);
+			$("#" + yaofangCount + "salePrice_P_" + _temp).attr("id", yaofangCount + "salePrice_P_" + id);
+			
+			$("#" + yaofangCount + "salePriceTotal_P_" + _temp).val(salePrice);
+			$("#" + yaofangCount + "salePriceTotal_P_" + _temp).attr("id", yaofangCount + "salePriceTotal_P_" + id);
+			
+			$("#appendMedicine" + yaofangCount + "medicineName_P_" + _temp).attr("id", "appendMedicine" + yaofangCount + "medicineName_P_" + id);
+    		sum2(yaofangCount);
+        }
+        //常用药品
+        var _isRepeat = false;
+        var xuhao = 1;
+        function frequentClick(id) {
+        	$("#yf"+yaofangCount)
+        	if ($("#yf"+yaofangCount).length>0) {
+        		
+        	} else {
+        		alert("请选择药方");
+        		return;
+        	}
+        	var bl = false;
+        	bl = shibafan(yaofangCount, id);
+        	if(!bl) {
+        		return;
+        	}
+        	//获取已选择的药品类别信息
+        	var ids = [];
+        	var peifangId=document.getElementsByName('Check[]'+yaofangCount); 
+        	for(var i=0; i<peifangId.length; i++) {    
+        		var tempId = peifangId[i].value;
+				ids.push(tempId);
+        	} 
+        	if($.inArray(id,ids) >= 0 ) {   
+        	    alert("不能重复选药品");
+        	    _isRepeat = true;
+        	    return false;
+        	} 
+        	_isRepeat = false;
+        	var medicineSerialNo = $("#frequentList_medicineSerialNo_"+id).text();
+        	var medicineName = $("#frequentList_medicineName_"+id).text();
+        	var unit = $("#frequentList_unit_"+id).text();
+        	var remark = $("#frequentList_remark_"+id).val();
+        	var salePrice = $("#frequentList_salePrice_"+id).text();
+        	if(medicineSerialNo == "" || medicineSerialNo == undefined) {
+        		$.ajax({
+            		type:'POST',
+            		url:'/doctor/crue/queryMedicineDetail',
+            		async:false, 
+            		cache: false,
+            		data:{'id':id},
+            		success: function(data) {
+            			medicineSerialNo = data.medicineSerialNo;
+                    	medicineName = data.medicineName;
+                    	unit = data.unit;
+                    	remark = data.remark;
+                    	salePrice = data.salePrice;
+            	     },
+            	     error: function(data) {
+            	     }
+            	});
+        	}
+        	var str =   "<tr><td class='style1'><input id='"+yaofangCount+"checkFlag_P_"+id+"'  class='style_checkbox margin_auto' type='checkbox' name='Check[]"+yaofangCount+"' value='"+id+"' onkeypress='if(event.keyCode==13) jumpMedicine(this);'/></td>"+ 
+        				"<td id='"+yaofangCount+"sort_P_"+id+"'>"+ xuhao++ +"</td>"+
+		        	    "<td class='font_size16'><input id='"+yaofangCount+"medicineName_P_"+id+"' value='"+medicineName+"' type='text' onkeydown='if(event.keyCode==13) jumpMedicine(this);' maxlength='10' onkeyup='getMedicineNameContentEdit(this)'  /><div id='appendMedicine"+yaofangCount+"medicineName_P_"+id+"' class='appendMedicine'></div></td>"+
+						"<td class='font_size16'><input class='input_kz' id='"+yaofangCount+"num_P_"+id+"' value='' type='text' onkeydown='if(event.keyCode==13) jumpMedicine(this);' onchange='sum2("+yaofangCount+")' maxlength='10' /></td>"+
+						
+// 						"<td class='font_size16'> <input class='input_bz' maxlength='4' value= '"+remark+"' id='"+yaofangCount+"remark_P_"+id+"' onkeyup='if(event.keyCode==13) jumpMedicine(this);'/></td>"+
+						"<td style='text-align: right;padding: 0px'>"+
+						"<select id='"+yaofangCount+"remark_P_"+id+"' class='style_select' style='width: 80px; border: 0px solid;'>"+
+						"<option value=''></option>"+
+						"<c:forEach var='pt' items='${yzRemarkList}'>"+
+						"<option value='${pt.id}'>${pt.name}</option>"+
+						"</c:forEach>"+
+						"</select>"+
+						"</td>"+
+						
+						"<input type='hidden' id='"+yaofangCount+"medicineSerialNo_P_"+id+"' value='"+medicineSerialNo+"' />"+
+						"<input type='hidden' id='"+yaofangCount+"unit_P_"+id+"'  value= '"+unit+"' />"+
+						"<input type='hidden' id='"+yaofangCount+"salePrice_P_"+id+"' value= '"+salePrice+"' />"+
+						"<input type='hidden' id='"+yaofangCount+"salePriceTotal_P_"+id+"' value= '"+salePrice+"' />"+
+						"</tr>";
+        	var tablea= $("#formulaList"+yaofangCount+"a tr").length;
+			var tableb= $("#formulaList"+yaofangCount+"b tr").length;
+			tablea=parseInt(tablea);
+			tableb=parseInt(tableb);
+			var tempTableAB = tablea+tableb;
+			if(tablea<=tableb) {
+				$("#formulaList"+yaofangCount+"a").append(str);
+			} else {
+				$("#formulaList"+yaofangCount+"b").append(str);
+			}
+    		sum2(yaofangCount);
+        }
+        //常用药方的点击事件
+        function mainClick(id) {
+        	if(yaofangCount == 10000) {
+        		alert("请选择药方");
+        		return;
+        	}
+        	$("#yf"+yaofangCount)
+        	if ($("#yf"+yaofangCount).length>0) {
+        		
+        	}else{
+        		alert("请选择药方");
+        		return;
+        	}
+	       $.ajax({
+	     	 	 type: 'POST',
+	     	     url:"/doctor/medicine/getAnagraphMain",
+	     	     type: "post",
+	     	     data: {'id':id},//参数
+	     	     datatype: "text",
+	     	  	 async:false, 
+	     	  	 cache: false,
+	     	     success: function(data) {
+	     	    	$("#usageMethod"+yaofangCount).val(data.usageMethod);
+	     	    	$("#dose"+yaofangCount).val(data.medicamentNum);
+	     	     },
+	     	     error: function(data) {
+	     	    	 alert("获取失败");
+	     	     }
+	     	});
+        	$.ajax({
+        	 	 type: 'POST',
+        	     url:"/doctor/medicine/getInfoList",
+        	     type: "post",
+        	     data: {'id':id},//参数
+        	     datatype: "text",
+        	     async:false, 
+        	     cache: false,
+        	     success: function(data) {
+        	    	 var ids = [];
+            		 var peifangId=document.getElementsByName('Check[]'+yaofangCount); 
+            		 for(var i=0; i<peifangId.length; i++) {    
+            		 	 var tempId = peifangId[i].value;
+						 ids.push(tempId);
+            		 } 
+            		 for(var i = 0;i<data.length;i++) {
+         	    		var medicineId =  data[i].medicineId;
+         	    		var bl = false;
+                     	bl = shibafan(yaofangCount,medicineId);
+                     	if(!bl){
+                     		return;
+                     	}
+            		 }
+        	    	 for(var i = 0;i<data.length;i++) {
+        	    		var medicineId =  data[i].medicineId;
+        	    		var bl = false;
+                    	bl = shibafan(yaofangCount,medicineId);
+                    	if(!bl){
+                    		return;
+                    	}
+        	   		 	var medicineSerialNo = data[i].medicineCode;
+        	   			var medicineName =  data[i].medicineName;
+        	   			var unit =  data[i].unit;
+        	   			var remark =  data[i].medicineRemark;
+        	   			var salePrice = data[i].salePrice;
+        	   			var yaopinNum = data[i].medicineCount;
+        	   			var salePriceTotal = parseFloat(salePrice)*parseFloat(yaopinNum);
+        	   			// $.inArray用===或!==比较值的类型
+        	   			var _medicineId = medicineId + '';
+        	   			if($.inArray(_medicineId,ids) >= 0) {
+        	   			    continue;
+        	   			}
+						var str =   "<tr><td class='style1'><input id='"+yaofangCount+"checkFlag_P_"+_medicineId+"'  class='style_checkbox margin_auto' type='checkbox' name='Check[]"+yaofangCount+"' value='"+_medicineId+"' onkeypress='if(event.keyCode==13) jumpMedicine(this);'/></td>"+ 
+	        				"<td id='"+yaofangCount+"sort_P_"+_medicineId+"'>"+ xuhao++ +"</td>"+
+			        	    "<td class='font_size16'><input id='"+yaofangCount+"medicineName_P_"+_medicineId+"' value='"+medicineName+"' type='text' onkeydown='if(event.keyCode==13) jumpMedicine(this);' maxlength='10' onkeyup='getMedicineNameContentEdit(this)'  /><div id='appendMedicine"+yaofangCount+"medicineName_P_"+_medicineId+"' class='appendMedicine'></div></td>"+
+							"<td class='font_size16'><input class='input_kz' id='"+yaofangCount+"num_P_"+_medicineId+"' value='"+yaopinNum+"' type='text' onkeydown='if(event.keyCode==13) jumpMedicine(this);' onchange='sum2("+yaofangCount+")' maxlength='10' /></td>"+
+// 							"<td class='font_size16'> <input class='input_bz' maxlength='4' id='"+yaofangCount+"remark_P_"+_medicineId+"' value='" + remark + "' onkeyup='if(event.keyCode==13) jumpMedicine(this);'/></td>"+
+
+						"<td style='text-align: right;padding: 0px'>"+
+						"<select id='"+yaofangCount+"remark_P_"+_medicineId+"' class='style_select' style='width: 80px; border: 0px solid;'>"+
+						"<option value=''></option>"+
+						"<c:forEach var='pt' items='${yzRemarkList}'>";
+						if(remark =='${pt.name}'){
+							str +="<option selected='selected' value='${pt.id}'>${pt.name}</option>";
+						} else {
+							str +="<option value='${pt.id}'>${pt.name}</option>";
+						}
+						str +=
+						"</c:forEach>"+
+						"</select>"+
+						"</td>"+
+
+							"<input type='hidden' id='"+yaofangCount+"medicineSerialNo_P_"+_medicineId+"' value='"+medicineSerialNo+"' />"+
+							"<input type='hidden' id='"+yaofangCount+"unit_P_"+_medicineId+"'  value= '"+unit+"' />"+
+							"<input type='hidden' id='"+yaofangCount+"salePrice_P_"+_medicineId+"' value= '"+salePrice+"' />"+
+							"<input type='hidden' id='"+yaofangCount+"salePriceTotal_P_"+_medicineId+"' value= '"+salePrice+"' />"+
+							"</tr>";
+			        	var tablea= $("#formulaList"+yaofangCount+"a tr").length;
+						var tableb= $("#formulaList"+yaofangCount+"b tr").length;
+						tablea=parseInt(tablea);
+						tableb=parseInt(tableb);
+						var tempTableAB = tablea+tableb;
+						if(tablea<=tableb) {
+							$("#formulaList"+yaofangCount+"a").append(str);
+						} else {
+							$("#formulaList"+yaofangCount+"b").append(str);
+						}
+        	    	 }
+        	    	 sum2(yaofangCount);
+        	     },
+        	     error: function(data) {
+        	    	 alert("获取失败");
+        	     }
+        	});
+        }
+        
+        //诊疗项目的点击事件
+        function zhenliaoClick(id) {
+        	var ids =[];
+        	var peifangId=document.getElementsByName('Check[]cure'); 
+        	for(var i=0; i<peifangId.length; i++) {    
+        		var tempId = peifangId[i].value;
+				ids.push(tempId);
+        	} 
+        	if($.inArray(id,ids) >= 0) {   
+        	    alert("不能重复选诊疗项目");   
+        	    return;
+        	} 
+        	var str = "";
+        	var cureSerialNo = $("#cureList_cureSerialNo_"+id).text();
+        	var cureName = $("#cureList_cureName_"+id).text();
+        	var totalPricce = $("#cureList_totalPricce_"+id).text();
+        	str += "<tr><td class='style5'><input class='style_checkbox' type='checkbox' name='Check[]cure' value='"+id+"' /></td>"+ 
+			   "<td class='style5' id='cureSerialNo_P_"+id+"'>"+cureSerialNo+"</td>"+
+			   "<td class='style5'><input id='cureName_P_"+id+"' value='"+cureName+"' type='text' onkeyup='if(event.keyCode==13) jumpZhenliao(this);' maxlength='10' readOnly/></td>"+
+			   "<td class='style5'><input id='curenum_P_"+id+"' value='1' type='text' onchange='checkNumZhenliao("+id+")' onkeyup='if(event.keyCode==13) jumpZhenliao(this);' maxlength='10' /></td>"+
+			   "<td class='style5' > <span id='cureunit_P_"+id+"'>次</span></td>"+
+			   "<td class='style5' > <span id='curetotalPricce_P_"+id+"'>"+totalPricce+"</span></td>"+
+			   "<td class='style5' > <span id='curetotalPricceT_P_"+id+"'>"+totalPricce+"</span></td>"+
+			   "<td class='style5'> <input maxlength='40' id='crueremark_P_"+id+"' onkeyup='if(event.keyCode==13) jumpZhenliao(this);'/></td></tr>";
+    	$("#formulaListCure").before(str);
+    	sum1();
+        }
+        //验证数量是否为数字
+        function checkNumZhenliao(id) {
+        	var num = $("#curenum_P_"+id).val();
+        	if(num == undefined) {
+        		return;
+        	}
+        	if(!checkNumber(num)) {
+        		alert("治疗和其它的数量请输入数字！");
+        		$("#curenum_P_"+id).val("1");
+        		return;
+        	}
+        	sum1();
+        }
+        //计算诊疗每一行的销售总价
+        function sum1() {
+        	//获取诊疗列表
+        	var sumPrice=0;
+        	sumPrice = parseFloat(sumPrice)
+        	var peifangIdcure=document.getElementsByName('Check[]cure'); 
+        	for(var i=0; i<peifangIdcure.length; i++) {
+        			var id = peifangIdcure[i].value;
+        			var numV = $("#curenum_P_"+id).val();
+        			if(numV == '') {
+        				alert("治疗和其它的数量请输入数字！")
+        				numV = 1;
+        				$("#curenum_P_"+id).val(1);
+        				return;
+        			}
+        			if(parseFloat(numV) <= 0) {
+        				alert("治疗和其它的数量必须大于0")
+        				numV = 1;
+        				$("#curenum_P_"+id).val(1);
+        				return;
+        			}
+        			if(!checkNumber(numV)) {
+        				alert("治疗和其它的数量请输入数字！");
+        				numV = 1;
+        				$("#curenum_P_"+id).val(1);
+        				return;
+        			}
+        			var salePriceZhenliao = $("#curetotalPricce_P_"+id).text(); //单价 
+        			var totalPriceZhenliao = salePriceZhenliao*numV;
+        			totalPriceZhenliao = totalPriceZhenliao.toFixed(2)
+        			sumPrice+=parseFloat(totalPriceZhenliao)
+        			$("#curetotalPricceT_P_"+id).text(totalPriceZhenliao);
+        	}
+        	sumPrice = sumPrice.toFixed(2);
+        	$("#zhenliaozongji").text(sumPrice);
+        	sum3();
+        }
+        
+      //计算药品明细每一行的销售总价
+        function sum2(yaofangId) {
+        	//获取药品列表
+        	var sumPrice=0;
+        	sumPrice = parseFloat(sumPrice);
+        	var peifangIdcure=document.getElementsByName('Check[]'+yaofangId); 
+        	for(var i=0; i<peifangIdcure.length; i++) {
+        			var id = peifangIdcure[i].value;
+        			var numV = $("#"+yaofangId+"num_P_"+id).val();
+        			if(parseFloat(numV) <= 0) {
+        				alert("药品的数量必须大于0");
+        				numV = 1;
+        				$("#"+yaofangId+"num_P_"+id).val();
+        				$("#"+yaofangId+"num_P_"+id).focus();
+        				$("#"+yaofangId+"num_P_"+id).select();
+        				return;
+        			}
+        			if(!checkNumber(numV)) {
+        				numV = 1;
+        				$("#"+yaofangId+"num_P_"+id).val();
+        				$("#"+yaofangId+"num_P_"+id).focus();
+        				$("#"+yaofangId+"num_P_"+id).select();
+        				return;
+        			}
+        			var salePriceYaopin = $("#"+yaofangId+"salePrice_P_"+id).val(); //单价 
+        			var totalPriceYaopin = salePriceYaopin*numV;
+        			totalPriceYaopin = totalPriceYaopin.toFixed(2)
+        			sumPrice+=parseFloat(totalPriceYaopin);
+        			$("#"+yaofangId+"salePriceTotal_P_"+id).val(totalPriceYaopin);
+        	}
+        	var dose = $("#dose"+yaofangId).val();
+        	if(dose == '') {
+				alert("药品的剂量请输入数字！")
+				dose = 1;
+				$("#dose"+yaofangId).val(1);
+				$("#yaopinzongji"+yaofangId).val(1);
+				return;
+			}
+			if(parseFloat(dose) <= 0) {
+				alert("药品的剂量必须大于0")
+				dose = 1;
+				$("#dose"+yaofangId).val(1);
+				$("#yaopinzongji"+yaofangId).val(1);
+				return;
+			}
+			if(!checkNumber(dose)) {
+				alert("药品的剂量请输入数字！");
+				dose = 1;
+				$("#dose"+yaofangId).val(1);
+				$("#yaopinzongji"+yaofangId).val(1);
+				return;
+			}
+        	sumPrice = sumPrice*dose;
+        	sumPrice = sumPrice.toFixed(2);
+        	$("#yaopinzongji"+yaofangId).text(sumPrice);
+        	sum3();
+        }
+      // 计算合计
+      function sum3() {
+    	  var sumPrice =0;
+    	  sumPrice = parseFloat(sumPrice)
+		  var yaofangIds=document.getElementsByName('yaofang');
+		  for(var i=0; i<yaofangIds.length; i++) {
+			  var yaofangId = yaofangIds[i].value;
+			  var zongji = $("#yaopinzongji"+yaofangId).text();
+			  sumPrice += parseFloat(zongji);
+		  }
+		  var zhenliaozongji = parseFloat($("#zhenliaozongji").text());
+		  sumPrice+=zhenliaozongji;
+		  sumPrice = sumPrice.toFixed(2);
+		  $("#allPrice").text(sumPrice);
+      }
+   	  // 自动保存第一个药房为常用药方
+      function commitFirstChangyong() {
+    	  	var yaofangId = "1";
+    		var ids = [];
+    		//定义json
+    		var json = JSON.parse("{\"title\":\"\",\"data\":[],\"dataList\":[]}");
+    		var patientName =  $("#hzxm").val().trim();
+    		var sysDepartmentName = $("#sysDepartmentName").val();//科室名称
+    		var sysDepartmentId =  $("#sysDepartmentId").val();//科室id
+    		var usageMethod =  $("#usageMethod"+yaofangId).val();//使用方法
+    		var dose = $("#dose"+yaofangId).val();// 剂数
+    		//其它表单数据
+    		var data = {
+    			"patientName" : patientName,
+    			"sysDepartmentName" : sysDepartmentName,
+    			"sysDepartmentId":sysDepartmentId,
+    			"usageMethod":usageMethod,
+    			"dose":dose
+    		};
+    		//放入data中
+    		json.data.push(data);
+    		//获取列表
+    		var peifangId=document.getElementsByName('Check[]'+yaofangId); 
+    		var coun = 0;
+    		for(var i=0; i<peifangId.length; i++) {
+    				var id = peifangId[i].value;
+    				var numV = $("#"+yaofangId+"num_P_"+id).val();
+    				if(numV == '') {
+    					alert("数量请输入数字！")
+    					return;
+    				}
+    				if(parseFloat(numV) <= 0) {
+    					alert("数量必须大于0")
+    					return;
+    				}
+    				if(!checkNumber(numV)) {
+    					alert("数量请输入数字！");
+    					return;
+    				}
+					if($.inArray(id,ids) >= 0) {   
+    				    alert("不能重复选药品");   
+    				    return;
+    				} 
+					var medicineName= $("#"+yaofangId+"medicineName_P_"+id).val();
+					if(medicineName == ''){
+						alert("药品名称不能为空");   
+    				    return;
+					}
+					ids.push(id);
+    				var dataList = {
+    					"tempId" : id,
+    					"sort" : $("#"+yaofangId+"sort_P_"+id).text(), //药品排序编号
+    					"medicineSerialNo" : $("#"+yaofangId+"medicineSerialNo_P_"+id).val(), //药品编号
+    					"medicineName" : medicineName, //药品名称
+    					"unit" : $("#"+yaofangId+"unit_P_"+id).val(), //单位
+    					"num" : $("#"+yaofangId+"num_P_"+id).val(), //数量
+    					"remark" : $("#"+yaofangId+"remark_P_"+id).find("option:selected").text() //备注
+    				};
+    				//放入json dataList中 向JSON数组添加JSON对象
+    				json.dataList.push(dataList);
+    				++coun;
+    		} 
+    		if(coun == 0) {
+    		    return false;
+    		}
+    		//格式化数据
+    		var jsonStr = JSON.stringify(json);
+    		$.ajax({
+    		 	 type: 'POST',
+    		     url:"/doctor/medicine/add",
+    		     type: "post",
+    		     async: false,
+    		     cache: false,
+    		     data: {'param':jsonStr},//参数
+    		     datatype: "text",
+    		     success: function(data) {
+    		    	 if (data == "SUCCESS"){
+    		    	 }else if(data == "REPEAT"){
+    		    		 alert("方案名称重复");
+    		    	 }else{
+    		    		 alert("提交失败");
+    		    	 }
+    		     },
+    		     error: function(data){
+    		    	 alert("提交失败");
+    		     }
+    		}); 
+    		searchChangYongYaofang(patientName);
+    	}
+      // 保存常用药方
+      function commitChangyong() {
+    	  var yaofangId = $("input[name='yaofangChangyong']:checked").val();
+    	  if(typeof(yaofangId)=="undefined") { 
+    		  alert("请选中一个方案");
+    		  return;
+    	  }
+    		var ids = [];
+    		//定义json
+    		var json = JSON.parse("{\"title\":\"\",\"data\":[],\"dataList\":[]}");
+    		var patientName =  $("#hzxm").val().trim();
+    		var sysDepartmentName = $("#sysDepartmentName").val();//科室名称
+    		var sysDepartmentId =  $("#sysDepartmentId").val();//科室id
+    		var usageMethod =  $("#usageMethod"+yaofangId).val();//使用方法
+    		var dose = $("#dose"+yaofangId).val();// 剂数
+    		//其它表单数据
+    		var data = {
+    			"patientName" : patientName,
+    			"sysDepartmentName" : sysDepartmentName,
+    			"sysDepartmentId":sysDepartmentId,
+    			"usageMethod":usageMethod,
+    			"dose":dose
+    		};
+    		//放入data中
+    		json.data.push(data);
+    		//获取列表
+    		var peifangId=document.getElementsByName('Check[]'+yaofangId); 
+    		//判断是否选择药品
+    		if(peifangId.length == 0) {
+    			alert("药品不能为空");   
+    		    return;
+    		}
+    		var coun = 0;
+    		for(var i=0; i<peifangId.length; i++) {
+    				var id = peifangId[i].value;
+    				var numV = $("#"+yaofangId+"num_P_"+id).val();
+    				if(numV == '') {
+    					alert("数量请输入数字！")
+    					return;
+    				}
+    				if(parseFloat(numV) <= 0) {
+    					alert("数量必须大于0")
+    					return;
+    				}
+    				if(!checkNumber(numV)) {
+    					alert("数量请输入数字！");
+    					return;
+    				}
+					if($.inArray(id,ids) >= 0) {   
+    				    alert("不能重复选药品");   
+    				    return;
+    				} 
+					var medicineName= $("#"+yaofangId+"medicineName_P_"+id).val();
+					if(medicineName == ''){
+						alert("药品名称不能为空");   
+    				    return;
+					}
+					ids.push(id);
+    				var dataList = {
+    					"tempId" : id,
+    					"sort" : $("#"+yaofangId+"sort_P_"+id).text(), //药品排序编号
+    					"medicineSerialNo" : $("#"+yaofangId+"medicineSerialNo_P_"+id).val(), //药品编号
+    					"medicineName" : medicineName, //药品名称
+    					"unit" : $("#"+yaofangId+"unit_P_"+id).val(), //单位
+    					"num" : $("#"+yaofangId+"num_P_"+id).val(), //数量
+    					"remark" : $("#"+yaofangId+"remark_P_"+id).find("option:selected").text() //备注
+    				};
+    				//放入json dataList中 向JSON数组添加JSON对象
+    				json.dataList.push(dataList);
+    				++coun;
+    			//}
+    		} 
+    		if(coun == 0) {
+    			alert("请选择药品");   
+    		    return;
+    		}
+    		//格式化数据
+    		var jsonStr = JSON.stringify(json);
+    		$.ajax({
+    		 	 type: 'POST',
+    		     url:"/doctor/medicine/add",
+    		     type: "post",
+    		     async: false,
+    		     cache: false,
+    		     data: {'param':jsonStr},//参数
+    		     datatype: "text",
+    		     success: function(data) {
+    		    	 if (data == "SUCCESS"){
+    		    		 $("#tips_modal").modal("show");
+    		    		 setTimeout(guanbi, 800);
+    		    	 }else if(data == "REPEAT"){
+    		    		 alert("方案名称重复");
+    		    	 }else{
+    		    		 alert("提交失败");
+    		    	 }
+//     		    	 $("#anagraphName").val("");
+    		     },
+    		     error: function(data){
+    		    	 alert("提交失败");
+    		     }
+    		}); 
+    		searchChangYongYaofang(patientName);
+    	}
+    	function guanbi() {
+    		$("#tips_modal").modal("hide");
+		}
+    	//十八分十九畏
+    	function shibafan(chufangId,medicineId) {
+    		var ids = "";
+    		$.ajax({
+	   		 	 type: 'POST',
+	   		     url:"/doctor/crue/shibafan",
+	    		 async:false, 
+	    		 cache: false,
+	   		     type: "post",
+	   		     data: {'medicineId':medicineId},//参数
+	   		     datatype: "text",
+	   		     success: function(data) {
+	   		    	 ids = data;
+	   		     },
+	   		     error: function(data){
+	   		     }
+   			 }); 
+        	var peifangId=document.getElementsByName('Check[]'+chufangId); 
+        	var _ids = ids.split(",");
+        	for(var i=0; i<peifangId.length; i++) {    
+        		var tempId = peifangId[i].value;
+        		if($.inArray(tempId, _ids) >= 0 ) {   
+				    alert("药品违反十八反十九畏规则");   
+				    return false;
+				} 
+        	} 
+        	return true;
+    	}
+    	//十八分十九畏 校验复选框的药品
+    	function shibafanMedicine(medicineId,idsMedicine) {
+    		var ids = "";
+    		$.ajax({
+    			 	 type: 'POST',
+    			     url:"/doctor/crue/shibafan",
+    			 	 async:false, 
+    			 	 cache: false,
+    			     type: "post",
+    			     data: {'medicineId':medicineId},//参数
+    			     datatype: "text",
+    			     success: function(data) {
+    			    	 ids = data;
+    			     },
+    			     error: function(data){
+    			     }
+    			 }); 
+    		var peifangId=idsMedicine.split(",");
+    		var _ids = ids.split(",");
+    		for(var i=0; i<peifangId.length; i++) {    
+    			var tempId = peifangId[i];
+    			if($.inArray(tempId, _ids) >= 0 ) {   
+    			    alert("药品违反十八反十九畏规则");   
+    			    return false;
+    			} 
+    		} 
+    		return true;
+    	}
+    	//全选/全不选
+    	function quanxuan(chufangId,obj) {
+    		if(obj.checked) {
+    			$("input[name='Check[]"+chufangId+"']").prop("checked","true");
+    		} else {
+    			$("input[name='Check[]"+chufangId+"']").removeAttr("checked",false);
+    		}
+    	}
+    	// 剂数点击事件
+    	function doseClick(obj) {
+    		$(obj).focus();
+    		$(obj).select();
+    	}
+    	// 添加诊疗
+        $(document).ready(function() {
+        	$("#q_commonanagraph").val($("#hzxm").val());
+        	$("#q_commonanagraph").keyup();
+            $(document).keydown(function(e) {
+                e = e || window.event;
+                var keycode = e.which ? e.which : e.keyCode;
+                if(keycode == 38) {
+                    if(jQuery.trim($("#append").html())=="") {
+                        return false;
+                    }
+                    movePrev();
+                } else if (keycode == 39) {
+                	if(jQuery.trim($("#append").html())=="") {
+                		return false;
+                    }
+                	$("#append").hide().html("");
+                	$("#cureName").focus();
+                } else if(keycode == 40) {
+                    if(jQuery.trim($("#append").html())=="") {
+                        return false;
+                    }
+                    $("#cureName").blur();
+                    if($(".item").hasClass("addbg")) {
+                        moveNext();
+                    } else {
+                        $(".item").removeClass('addbg').eq(0).addClass('addbg');
+                    }
+                } else if(keycode == 13) {
+                	if(jQuery.trim($("#append").html())=="") {
+                        return false;
+                    }
+					$(document).unbind("scroll");
+					$("#cureName").val("");
+                   	dojob();
+                }
+            });
+            // 诊疗鼠标左键点击添加诊疗项目
+            $(document).mousedown(function(e) {
+            	$(document).unbind("scroll");
+        		if(1 == e.which){
+        			$("#cureName").val("");
+        			dojob();
+        		}
+        	});
+            // 诊疗向翻页
+            var movePrev = function() {
+                $("#cureName").blur();
+                var index = $(".addbg").prevAll().length;
+                if(index == 0) {
+                    $(".item").removeClass('addbg').eq($(".item").length-1).addClass('addbg');
+                } else {
+                    $(".item").removeClass('addbg').eq(index-1).addClass('addbg');
+                }
+            }
+            // 诊疗向下翻页
+            var moveNext = function() {
+                var index = $(".addbg").prevAll().length;
+                if(index == $(".item").length-1) {
+                    $(".item").removeClass('addbg').eq(0).addClass('addbg');
+                } else {
+                    $(".item").removeClass('addbg').eq(index+1).addClass('addbg');
+                }
+            }
+            // 添加药品鼠标左键点击或回车添加选中诊疗项目
+            var dojob = function() {
+            	if($(".addbg").length == 0) {
+            		$("#append").hide().html("");
+            		return false;
+            	}
+            	if(jQuery.trim($("#append").html())=="") {
+                    return false;
+                }
+                $("#cureName").blur();
+                var value = $(".addbg")[0].id;
+                zhenliaoClick(value);
+                $("#append").hide().html("");
+                $("#cureName_P_"+value).focus();
+                $("#cureName_P_"+value).select();
+            }
+        });
+    	// 诊疗模糊查询
+        function getContent(obj) {
+        	// 窗口滚动条拉倒最下边
+        	$(window).scrollTop($(document).height() - $(window).height());
+			var scrllo_height = $(document).scrollTop();
+	        $(document).bind("scroll",function () {
+	            $(window).scrollTop(scrllo_height);
+	        });
+            var kw = jQuery.trim($(obj).val());
+            if(kw == "") {
+                $("#append").hide().html("");
+                return false;
+            }
+            var html = "";
+            $.ajax({
+        		type:'POST',
+        		url:'/base/cure/getCureList',
+        		data:{
+        			cureName:kw
+        		},
+        		success: function(data) {
+        			for (var i = 0; i < data.length; i++) {
+     	                html = html + "<div id =" + data[i].id  + "  class='item' onmouseenter='getFocus(this)' onClick='getCon(this);'>" + data[i].cureName + "</div>"
+     	            }
+     	            if(html != "") {
+     	                $("#append").show().html(html);
+     	            } else {
+     	                $("#append").hide().html("");
+     	            }
+        	     },
+        	     error: function(data) {
+        	     }
+        	});
+        }
+        // 诊疗鼠标移动事件
+        function getFocus(obj) {
+            $(".item").removeClass("addbg");
+            $(obj).addClass("addbg");
+        }
+        // 诊疗鼠标点击事件选中药品
+        function getCon(obj) {
+            var value = $(obj).text();
+            $("#cureName").val(value);
+            $("#append").hide().html("");
+        }
+        // 诊疗跳转
+        function jumpZhenliao(obj) {
+           	var cureTag = obj.id.split("_P_")[0];
+           	var cureTagId = obj.id.split("P_")[1];
+           	if(cureTag == "cureName") {
+           		$("#curenum_P_"+cureTagId).focus();
+           		$("#curenum_P_"+cureTagId).select();
+           	} else if(cureTag == "curenum") {
+//            		$("#crueremark_P_"+cureTagId).focus();
+//            	} else if(cureTag == "crueremark") {
+           		$("#cureName").focus();
+           	}
+        }
+        // 添加药品
+        $(document).ready(function() {
+            $(document).keydown(function(e) {
+                e = e || window.event;
+                var keycode = e.which ? e.which : e.keyCode;
+                if(keycode == 27) {// ESC键
+                	if(jQuery.trim($("#appendMedicine").html())==""){
+                        return;
+                    }
+                	$("#appendMedicine").hide().html("");
+                	$("#cureMedicineName"+yaoFangTemp).focus();
+                } else if(keycode == 37) {// 左键
+                	$("#cureMedicineName"+yaoFangTemp).blur();
+                    if(jQuery.trim($("#appendMedicine").html())==""){
+                    	return false;
+                    }
+                    movePrevMedicine();
+                } else if(keycode == 38) {// 上键
+                	$("#cureMedicineName"+yaoFangTemp).blur();
+                    if(jQuery.trim($("#appendMedicine").html())==""){
+                    	return false;
+                    }
+                    moveUpMedicine();
+                } else if(keycode == 39) {// 右键
+                	if(jQuery.trim($("#appendMedicine").html())=="") {
+                        return false;
+                    }
+                    $("#cureMedicineName"+yaoFangTemp).blur();
+                    if($(".item").hasClass("addbgMedicine")) {
+                        moveNextMedicine();
+                    } else {
+                        $(".item").removeClass('addbgMedicine').eq(0).addClass('addbgMedicine');
+                    }
+                } else if(keycode == 40) {// 下键
+                    if(jQuery.trim($("#appendMedicine").html())==""){
+                        return false;
+                    }
+                    $("#cureMedicineName"+yaoFangTemp).blur();
+                    if($(".item").hasClass("addbgMedicine")) {
+                        moveDownMedicine();
+                    } else {
+                        $(".item").removeClass('addbgMedicine').eq(0).addClass('addbgMedicine');
+                    }
+                } else if(keycode == 13) {
+                	if(jQuery.trim($("#appendMedicine").html())==""){
+                        return false;
+                    }
+					$(document).unbind("scroll");
+					$("#cureMedicineName"+yaoFangTemp).val("");
+                   	dojobMedicine();
+                }else if (keycode == 114) {
+        	    	$("#cureMedicineName"+yaofangId).focus();
+        	    	table_click(yaofangId);
+        	    	return false;
+        	    };
+            });
+            // 添加药方鼠标左键点击选中添加药品
+            $(document).mousedown(function(e) {
+            	$(document).unbind("scroll");
+        		if(1 == e.which) {
+        			$("#cureMedicineName"+yaoFangTemp).val("");
+        			dojobMedicine();
+        		}
+        	});
+            // 向左翻页
+            var movePrevMedicine = function() {
+                $("#cureMedicineName"+yaoFangTemp).blur();
+                var index = $(".addbgMedicine").prevAll().length;
+                if(index == 0) {
+                    $(".item").removeClass('addbgMedicine').eq($(".item").length-1).addClass('addbgMedicine');
+                } else {
+                    $(".item").removeClass('addbgMedicine').eq(index-1).addClass('addbgMedicine');
+                }
+            }
+            // 向右翻页
+            var moveNextMedicine = function() {
+                var index = $(".addbgMedicine").prevAll().length;
+                if(index == $(".item").length-1) {
+                    $(".item").removeClass('addbgMedicine').eq(0).addClass('addbgMedicine');
+                } else {
+                    $(".item").removeClass('addbgMedicine').eq(index+1).addClass('addbgMedicine');
+                }
+            }
+            // 向上翻页
+            var moveUpMedicine = function() {
+                $("#cureMedicineName"+yaoFangTemp).blur();
+                var index = $(".addbgMedicine").prevAll().length;
+                var _totalIndex = $(".item").length;
+                var _group = parseInt(_totalIndex/4);
+                var _remainder = _totalIndex % 4;
+                if(index - 3 > 0) {
+                    $(".item").removeClass('addbgMedicine').eq(index-4).addClass('addbgMedicine');
+                } else {
+                	// 向上翻页算法：_positionTemp为列的第一个位置，_remainder为总数除以列数取余
+                	var _positionTemp = index + 1;
+                	if(_positionTemp == 1) {
+                		if(_remainder == 1) {
+                			$(".item").removeClass('addbgMedicine').eq(_totalIndex - 1).addClass('addbgMedicine');
+                		}
+						if(_remainder == 2) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 2).addClass('addbgMedicine');
+                		}
+						if(_remainder == 3) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 3).addClass('addbgMedicine');
+                		}
+						if(_remainder == 0) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 4).addClass('addbgMedicine');
+                		}
+                	} else if(_positionTemp == 2) {
+                		if(_remainder == 1) {
+                			$(".item").removeClass('addbgMedicine').eq(_totalIndex - 4).addClass('addbgMedicine');
+                		}
+						if(_remainder == 2) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 1).addClass('addbgMedicine');
+                		}
+						if(_remainder == 3) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 2).addClass('addbgMedicine');
+                		}
+						if(_remainder == 0) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 3).addClass('addbgMedicine');
+                		}
+                	} else if(_positionTemp == 3) {
+                		if(_remainder == 1) {
+                			$(".item").removeClass('addbgMedicine').eq(_totalIndex - 3).addClass('addbgMedicine');
+                		}
+						if(_remainder == 2) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 4).addClass('addbgMedicine');
+                		}
+						if(_remainder == 3) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 1).addClass('addbgMedicine');
+                		}
+						if(_remainder == 0) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 2).addClass('addbgMedicine');
+                		}
+                	} else if(_positionTemp == 4) {
+                		if(_remainder == 1) {
+                			$(".item").removeClass('addbgMedicine').eq(_totalIndex - 2).addClass('addbgMedicine');
+                		}
+						if(_remainder == 2) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 3).addClass('addbgMedicine');
+                		}
+						if(_remainder == 3) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 4).addClass('addbgMedicine');
+                		}
+						if(_remainder == 0) {
+							$(".item").removeClass('addbgMedicine').eq(_totalIndex - 1).addClass('addbgMedicine');
+                		}
+                	}
+                }
+            }
+            // 向下翻页
+            var moveDownMedicine = function() {
+                var index = $(".addbgMedicine").prevAll().length;
+                var _totalIndex = $(".item").length;
+                var _jump = (index + 1) % 4;
+               	if(_jump == 0) {
+               		_jump = 4;
+               	}
+               	if((index+5) >  _totalIndex) {
+                    $(".item").removeClass('addbgMedicine').eq(_jump - 1).addClass('addbgMedicine');
+               	} else {
+               		$(".item").removeClass('addbgMedicine').eq(index+4).addClass('addbgMedicine');
+               	}
+            }
+            // 添加药方鼠标左键点击或回车添加选中药品
+            var dojobMedicine = function() {
+            	if($(".addbgMedicine").length == 0) {
+            		$("#appendMedicine").hide().html("");
+            		return false;
+            	}
+            	if(jQuery.trim($("#appendMedicine").html())=="") {
+                    return false;
+                }
+//             	if($("div:not('#appendMedicine')")) {
+//             		$("#appendMedicine").hide().html("");
+//     				return false;
+//     			}
+                $("#cureMedicineName"+yaoFangTemp).blur();
+                var value = $(".addbgMedicine")[0].id;
+                frequentClick(value);
+                $("#appendMedicine").hide().html("");
+                if(!_isRepeat) {
+                	$("#"+yaoFangTemp+"num_P_"+value).focus();
+                } else {
+                	$("#"+yaoFangTemp+"num_P_"+value).focus();
+                	$("#"+yaoFangTemp+"num_P_"+value).select();
+                }
+            }
+        });
+        // 添加药方药品模糊查询
+        function getMedicineNameContent(obj) {
+        	_editFlag = false;
+			var scrllo_height = $(document).scrollTop();
+	        $(document).bind("scroll",function () {
+	            $(window).scrollTop(scrllo_height);
+	        });
+            var kw = jQuery.trim($(obj).val());
+            if(kw == "") {
+                $("#appendMedicine").hide().html("");
+                return false;
+            }
+            var html = "";
+            $.ajax({
+        		type:'POST',
+        		async: false,
+        		cache: false,
+        		url:'/base/medicine/getAllListNoPage',
+        		data:{
+        			medicineName:kw,
+        			isProhibit:0
+        		},
+        		success: function(data) {                                       
+        			for (var i = 0; i < data.length; i++) {
+     	                html = html + "<div id =" + data[i].id  + "  class='item' onmouseenter='getFocusMedicine(this)' onClick='getConMedicine(this);'>" + data[i].medicineName + "</div>"
+     	            }
+     	            if(html != "") {
+     	                $("#appendMedicine").show().html(html);
+     	            } else {
+     	                $("#appendMedicine").hide().html("");
+     	            }
+        	     },
+        	     error: function(data) {
+        	     }
+        	});
+        }
+        // 添加药方鼠标移动事件
+        function getFocusMedicine(obj) {
+            $(".item").removeClass("addbgMedicine");
+            $(obj).addClass("addbgMedicine");
+        }
+        // 添加药方鼠标点击事件
+        function getConMedicine(obj) {
+            var value = $(obj).text();
+            $("#cureMedicineName"+yaoFangTemp).val(value);
+            $("#appendMedicine").hide().html("");
+        }
+        // 回车跳转：添加药品、增加药方、编辑药方公用
+        function jumpMedicine(obj) {
+        	var cureTag = obj.id.split("_P_")[0];
+           	var cureTagId = obj.id.split("_P_")[1];
+           	if(cureTag == yaoFangTemp+"checkFlag") {
+           		$("#"+yaoFangTemp+"num_P_"+cureTagId).focus();
+           		$("#"+yaoFangTemp+"num_P_"+cureTagId).select();
+           	} else if(cureTag == yaoFangTemp+"num") {
+//            		$("#"+yaoFangTemp+"remark_P_"+cureTagId).focus();
+//            	} else if(cureTag == yaoFangTemp+"remark"){
+				if($("#"+yaoFangTemp+"num_P_"+cureTagId).val() == '') {
+					alert("请输入药品数量！");
+					$("#"+yaoFangTemp+"num_P_"+cureTagId).focus();
+					return false;
+				} else if(!checkNumber($("#"+yaoFangTemp+"num_P_"+cureTagId).val())) {
+					alert("请输入数字");
+					$("#"+yaoFangTemp+"num_P_"+cureTagId).val("");
+					$("#"+yaoFangTemp+"num_P_"+cureTagId).focus();
+				}
+				if(!_editFlag) {
+					// 添加药方、增加药方时跳回药品输入框
+           			$("#cureMedicineName"+yaoFangTemp).focus();
+           		} else {
+           			// 编辑药方跳到备注输入框
+           			$("#"+yaoFangTemp+"remark_P_"+cureTagId).focus();
+           		}
+           	}
+        }
+        // 医嘱药方编辑
+        var _editMedicineId = "";
+        $(document).ready(function() {
+            $(document).keydown(function(e) {
+                e = e || window.event;
+                var keycode = e.which ? e.which : e.keyCode;
+                if(keycode == 27) {// ESC键
+                	if(jQuery.trim($("#appendMedicine" +_editMedicineId).html())==""  || _editMedicineId == "") {
+                		return false;
+                    }
+                	$("#appendMedicine"+_editMedicineId).hide().html("");
+                	$("#cureMedicineName"+yaoFangTemp).focus();
+                } else if(keycode == 37) {// 左键
+                	if(jQuery.trim($("#appendMedicine"+ _editMedicineId).html())==""  || _editMedicineId == "") {
+                    	return false;
+                    }
+                    movePrevMedicineEdit();
+                } else if(keycode == 38) {
+                    if(jQuery.trim($("#appendMedicine"+ _editMedicineId).html())==""  || _editMedicineId == "") {
+                    	return false;
+                    }
+                    document.activeElement.blur();
+                    moveUpMedicineEdit();
+                } else if(keycode == 39) {
+                	if(jQuery.trim($("#appendMedicine" +_editMedicineId).html())==""  || _editMedicineId == "") {
+                		return false;
+                    }
+                	$("#cureMedicineName"+yaoFangTemp).blur();
+                    if($(".item").hasClass("addbgMedicine")) {
+                        moveNextMedicineEdit();
+                    } else {
+                        $(".item").removeClass('addbgMedicine').eq(0).addClass('addbgMedicine');
+                    }
+                } else if(keycode == 40) {
+                    if(jQuery.trim($("#appendMedicine"+_editMedicineId).html())=="" || _editMedicineId == "") {
+                    	return false;
+                    }
+                    document.activeElement.blur();
+                    $("#cureMedicineName"+yaoFangTemp).blur();
+                    if($(".item").hasClass("addbgMedicine")) {
+                        moveDownMedicineEdit();
+                    } else {
+                        $(".item").removeClass('addbgMedicine').eq(0).addClass('addbgMedicine');
+                    }
+                } else if(keycode == 13) {
+                	if(jQuery.trim($("#appendMedicine"+_editMedicineId).html())=="" || _editMedicineId == "") {
+                    	return false;
+                    }
+					$(document).unbind("scroll");
+					$("#cureMedicineName"+yaoFangTemp).val("");
+                   	dojobMedicineEdit();
+                }
+            });
+            // 编辑操作鼠标点击添加药品
+            $(document).mousedown(function(e) {
+            	$(document).unbind("scroll");
+        		if(1 == e.which) {
+        			$("#cureMedicineName"+yaoFangTemp).val("");
+        			dojobMedicineEdit();
+        		}
+        	});
+        });
+        // 向左翻页
+       function movePrevMedicineEdit() {
+            $("#cureMedicineName"+yaoFangTemp).blur();
+            var index = $(".addbgMedicine").prevAll().length;
+            if(index == 0) {
+                $(".item").removeClass('addbgMedicine').eq($(".item").length-1).addClass('addbgMedicine');
+            } else {
+                $(".item").removeClass('addbgMedicine').eq(index-1).addClass('addbgMedicine');
+            }
+        }
+       // 向右翻页
+       function moveNextMedicineEdit() {
+            var index = $(".addbgMedicine").prevAll().length;
+            if(index == $(".item").length-1) {
+                $(".item").removeClass('addbgMedicine').eq(0).addClass('addbgMedicine');
+            } else {
+                $(".item").removeClass('addbgMedicine').eq(index+1).addClass('addbgMedicine');
+            }
+        }
+       // 向上翻页
+       var moveUpMedicineEdit = function() {
+           $("#cureMedicineName"+yaoFangTemp).blur();
+           var index = $(".addbgMedicine").prevAll().length;
+           var _totalIndex = $(".item").length;
+           var _group = parseInt(_totalIndex/4);
+           var _remainder = _totalIndex % 4;
+           if(index - 3 > 0) {
+               $(".item").removeClass('addbgMedicine').eq(index-4).addClass('addbgMedicine');
+           } else {
+        	   // 向上翻页算法：_positionTemp当前列位置，_remainder总数除以列数的余数
+	           	var _positionTemp = index + 1;
+	           	if(_positionTemp == 1) {
+	           		if(_remainder == 1) {
+	           			$(".item").removeClass('addbgMedicine').eq(_totalIndex - 1).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 2) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 2).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 3) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 3).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 0) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 4).addClass('addbgMedicine');
+	           		}
+	           	} else if(_positionTemp == 2) {
+	           		if(_remainder == 1) {
+	           			$(".item").removeClass('addbgMedicine').eq(_totalIndex - 4).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 2) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 1).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 3) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 2).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 0) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 3).addClass('addbgMedicine');
+	           		}
+	           	} else if(_positionTemp == 3) {
+	           		if(_remainder == 1) {
+	           			$(".item").removeClass('addbgMedicine').eq(_totalIndex - 3).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 2) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 4).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 3) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 1).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 0) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 2).addClass('addbgMedicine');
+	           		}
+	           	}
+	           	else if(_positionTemp == 4) {
+	           		if(_remainder == 1) {
+	           			$(".item").removeClass('addbgMedicine').eq(_totalIndex - 2).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 2) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 3).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 3) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 4).addClass('addbgMedicine');
+	           		}
+					if(_remainder == 0) {
+						$(".item").removeClass('addbgMedicine').eq(_totalIndex - 1).addClass('addbgMedicine');
+	           		}
+	           	}
+           }
+       }
+       // 向下翻页
+       var moveDownMedicineEdit = function() {
+           var index = $(".addbgMedicine").prevAll().length;
+           var _totalIndex = $(".item").length;
+           var _jump = (index + 1) % 4;
+          	if(_jump == 0){
+          		_jump = 4;
+          	}
+          	if((index+5) >  _totalIndex) {
+               $(".item").removeClass('addbgMedicine').eq(_jump - 1).addClass('addbgMedicine');
+          	} else {
+          		$(".item").removeClass('addbgMedicine').eq(index+4).addClass('addbgMedicine');
+          	}
+       }
+       // 编辑操作鼠标左键点击或回车选中添加药品
+        function dojobMedicineEdit() {
+        	if(jQuery.trim($("#appendMedicine"+_editMedicineId).html())=="" || _editMedicineId == "") {
+            	return false;
+            }
+        	if($(".addbgMedicine").length == 0) {
+        		$("#appendMedicine"+_editMedicineId).hide().html("");
+        		return false;
+        	}
+            $("#cureMedicineName"+yaoFangTemp).blur();
+            var value = $(".addbgMedicine")[0].id;
+            $("#appendMedicine"+_editMedicineId).hide().html("");
+            frequentClickEdit(value);
+            $("#"+yaoFangTemp+"medicineName_P_"+value).blur();
+            $("#"+yaoFangTemp+"num_P_"+value).focus();
+            $("#"+yaoFangTemp+"num_P_"+value).select();
+        }
+        var _medicineTemp = "";
+        var _editFlag = false;
+        // 编辑操作谋划查询药品
+        function getMedicineNameContentEdit(obj) {
+        	_editFlag = true;
+        	var _id = obj.id;
+        	_medicineTemp = obj.defaultValue;
+        	_editMedicineId = _id;
+			var scrllo_height = $(document).scrollTop();
+	        $(document).bind("scroll",function () {
+	            $(window).scrollTop(scrllo_height);
+	        });
+            var kw = jQuery.trim($(obj).val());
+            if(kw == "") {
+                return false;
+            }
+            var html = "";
+            $.ajax({
+        		type:'POST',
+        		async: false,
+        		cache: false,
+        		url:'/base/medicine/getAllListNoPage',
+        		data:{
+        			medicineName:kw,
+        			isProhibit:0
+        		},
+        		success: function(data) {
+        			for (var i = 0; i < data.length; i++) {
+     	                html = html + "<div id =" + data[i].id  + "  class='item' onmouseenter='getFocusMedicineEdit(this)' onClick='getConMedicineEdit(this,"+ _id +");'>" + data[i].medicineName + "</div>"
+     	            }
+     	            if(html != "") {
+     	                $("#appendMedicine" + _id).show().html(html);
+     	            } else {
+     	                $("#appendMedicine" + _id).hide().html("");
+     	            }
+        	     },
+        	     error: function(data) {
+        	     }
+        	});
+        }
+        // 编辑操作鼠标移动事件
+        function getFocusMedicineEdit(obj) {
+            $(".item").removeClass("addbgMedicine");
+            $(obj).addClass("addbgMedicine");
+        }
+        // 编辑操作点击选中
+        function getConMedicineEdit(obj, id) {
+            var value = $(obj).text();
+            $("#cureMedicineName"+yaoFangTemp).val(value);
+            $("#appendMedicine" + id).hide().html("");
+        }
+        // 增加药方
+        $(document).ready(function() {
+            $(document).keydown(function(e) {
+                e = e || window.event;
+                var keycode = e.which ? e.which : e.keyCode;
+                if(keycode == 27) {// ESC键
+                	if(jQuery.trim($("#appendMedicineAdd"+yaoFangTemp).html())=="") {
+                    	return false;
+                    }
+                	$("#appendMedicine").hide().html("");
+                	$("#cureMedicineName"+yaoFangTemp).focus();
+                } else if(keycode == 37) {// 左键
+                	if(jQuery.trim($("#appendMedicineAdd"+yaoFangTemp).html())=="") {
+                    	return false;
+                    }
+                    movePrevMedicineAdd();
+                } else if(keycode == 38) {// 上键
+                	if(jQuery.trim($("#appendMedicineAdd"+yaoFangTemp).html())=="") {
+                    	return false;
+                    }
+                    moveUpMedicineAdd();
+                } else if(keycode == 39) {// 右键
+	                if(jQuery.trim($("#appendMedicineAdd"+yaoFangTemp).html())=="") {
+	                	return false;
+	                }
+                    $("#cureMedicineName"+yaoFangTemp).blur();
+                    if($(".item").hasClass("addbgMedicine")) {
+                        moveNextMedicineAdd();
+                    } else {
+                        $(".item").removeClass('addbgMedicine').eq(0).addClass('addbgMedicine');
+                    }
+                } else if(keycode == 40) {// 下键
+                    if(jQuery.trim($("#appendMedicineAdd"+yaoFangTemp).html())=="") {
+                    	return false;
+                    }
+                    $("#cureMedicineName"+yaoFangTemp).blur();
+                    if($(".item").hasClass("addbgMedicineAdd")) {
+                    	moveDownMedicineAdd();
+                    } else {
+                        $(".item").removeClass('addbgMedicineAdd').eq(0).addClass('addbgMedicineAdd');
+                    }
+                } else if(keycode == 13) {
+                   	if(jQuery.trim($("#appendMedicineAdd"+yaoFangTemp).html())==""){
+                		return false;
+                    }
+					$(document).unbind("scroll");
+					$("#cureMedicineName"+yaoFangTemp).val("");
+                   	dojobMedicineAdd();
+                }
+            });
+            // 增加药方鼠标点击添加药品
+            $(document).mousedown(function(e) {
+            	$(document).unbind("scroll");
+        		if(1 == e.which) {
+        			$("#cureMedicineName"+yaoFangTemp).val("");
+        			dojobMedicineAdd();
+        		}
+        	});
+            // 向左翻页
+            var movePrevMedicineAdd = function() {
+                $("#cureMedicineName"+yaoFangTemp).blur();
+                var index = $(".addbgMedicineAdd").prevAll().length;
+                if(index == 0) {
+                    $(".item").removeClass('addbgMedicineAdd').eq($(".item").length-1).addClass('addbgMedicineAdd');
+                } else {
+                    $(".item").removeClass('addbgMedicineAdd').eq(index-1).addClass('addbgMedicineAdd');
+                }
+            }
+            // 向右翻页
+            var moveNextMedicineAdd = function() {
+                var index = $(".addbgMedicineAdd").prevAll().length;
+                if(index == $(".item").length-1) {
+                    $(".item").removeClass('addbgMedicineAdd').eq(0).addClass('addbgMedicineAdd');
+                } else {
+                    $(".item").removeClass('addbgMedicineAdd').eq(index+1).addClass('addbgMedicineAdd');
+                }
+            }
+            // 向上翻页
+            var moveUpMedicineAdd = function() {
+                $("#cureMedicineName"+yaoFangTemp).blur();
+                var index = $(".addbgMedicineAdd").prevAll().length;
+                var _totalIndex = $(".item").length;
+                var _group = parseInt(_totalIndex/4);
+                var _remainder = _totalIndex % 4;
+                if(index - 3 > 0) {
+                    $(".item").removeClass('addbgMedicineAdd').eq(index-4).addClass('addbgMedicineAdd');
+                } else {
+                	// 每列第一个位置的跳转算法：_positionTemp是位置，_remainder是总数除以步长的余数
+                	var _positionTemp = index + 1;
+                	if(_positionTemp == 1) {
+                		if(_remainder == 1) {
+                			$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 1).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 2) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 2).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 3) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 3).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 0) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 4).addClass('addbgMedicineAdd');
+                		}
+                	} else if(_positionTemp == 2) {
+                		if(_remainder == 1) {
+                			$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 4).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 2) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 1).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 3) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 2).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 0) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 3).addClass('addbgMedicineAdd');
+                		}
+                	} else if(_positionTemp == 3) {
+                		if(_remainder == 1) {
+                			$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 3).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 2) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 4).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 3) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 1).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 0) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 2).addClass('addbgMedicineAdd');
+                		}
+                	}else if(_positionTemp == 4) {
+                		if(_remainder == 1) {
+                			$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 2).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 2) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 3).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 3) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 4).addClass('addbgMedicineAdd');
+                		}
+     					if(_remainder == 0) {
+     						$(".item").removeClass('addbgMedicineAdd').eq(_totalIndex - 1).addClass('addbgMedicineAdd');
+                		}
+                	}
+                }
+            }
+            // 向下翻页
+            var moveDownMedicineAdd = function() {
+                var index = $(".addbgMedicineAdd").prevAll().length;
+                var _totalIndex = $(".item").length;
+                var _jump = (index + 1) % 4;
+               	if(_jump == 0) {
+               		_jump = 4;
+               	}
+               	if((index+5) >  _totalIndex) {
+                    $(".item").removeClass('addbgMedicineAdd').eq(_jump - 1).addClass('addbgMedicineAdd');
+               	} else {
+               		$(".item").removeClass('addbgMedicineAdd').eq(index+4).addClass('addbgMedicineAdd');
+               	}
+            }
+            // 增加药方鼠标左键点击或回车选中添加药品
+            var dojobMedicineAdd = function() {
+            	if($(".addbgMedicineAdd").length == 0) {
+            		$("#appendMedicineAdd"+yaoFangTemp).hide().html("");
+            		return false;
+            	}
+            	if(jQuery.trim($("#appendMedicineAdd"+yaoFangTemp).html())=="") {
+                    return false;
+                }
+                $("#cureMedicineName"+yaoFangTemp).blur();
+                var value = $(".addbgMedicineAdd")[0].id;
+                frequentClick(value);
+                $("#appendMedicineAdd"+yaoFangTemp).hide().html("");
+                // 重复添加药品跳转到重复药品的数量
+                if(!_isRepeat) {
+                	$("#"+yaoFangTemp+"checkFlag_P_"+value).focus();
+                } else {
+                	$("#"+yaoFangTemp+"num_P_"+value).focus();
+                	$("#"+yaoFangTemp+"num_P_"+value).select();
+                }
+            }
+        });
+        // 增加药方模糊查询药品信息
+        function getMedicineNameContentAdd(obj) {
+        	_editFlag = false;
+			var scrllo_height = $(document).scrollTop();
+	        $(document).bind("scroll",function () {
+	            $(window).scrollTop(scrllo_height);
+	        });
+            var kw = jQuery.trim($(obj).val());
+            if(kw == "") {
+                $("#appendMedicineAdd"+yaoFangTemp).hide().html("");
+                return false;
+            }
+            var html = "";
+            $.ajax({
+        		type:'POST',
+        		async: false,
+        		cache: false,
+        		url:'/base/medicine/getAllListNoPage',
+        		data:{
+        			medicineName:kw,
+        			isProhibit:0
+        		},
+        		success: function(data) {                                       
+        			for (var i = 0; i < data.length; i++) {
+     	                html = html + "<div id =" + data[i].id  + "  class='item' onmouseenter='getFocusMedicineAdd(this)' onClick='getConMedicineAdd(this);'>" + data[i].medicineName + "</div>"
+     	            }
+     	            if(html != "") {
+     	                $("#appendMedicineAdd"+yaoFangTemp).show().html(html);
+     	            } else {
+     	                $("#appendMedicineAdd"+yaoFangTemp).hide().html("");
+     	            }
+        	     },
+        	     error: function(data){
+        	     }
+        	});
+        }
+        // 增加药方鼠标移动事件选中状态
+        function getFocusMedicineAdd(obj) {
+            $(".item").removeClass("addbgMedicineAdd");
+            $(obj).addClass("addbgMedicineAdd");
+        }
+        // 增加药方鼠标点击事件选中药品名称
+        function getConMedicineAdd(obj) {
+            var value = $(obj).text();
+            $("#cureMedicineName"+yaoFangTemp).val(value);
+            $("#appendMedicineAdd"+yaoFangTemp).hide().html("");
+        }
+        // 禁用回退
+        $(function () {  
+        	history.pushState(null, null, document.URL);  
+        	window.addEventListener('popstate', function () {  
+        		history.pushState(null, null, document.URL);  
+        	});  
+        }) 
+        // 禁用tab键
+         $(document).ready(function () {
+            $(document).bind('keydown', function (event) {
+                if (event.keyCode == 9) {
+                    return false;
+                }
+            });
+        });
+        // 取消
+        function yizhusavecancel() {
+       	 window.location.href="/doctor/crue/list?onlyMe=1";
+       }
+    </script>
